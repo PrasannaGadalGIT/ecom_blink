@@ -1,0 +1,4 @@
+/venv
+/nlp100
+word2vec_product_model.model
+.env

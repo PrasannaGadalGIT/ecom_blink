@@ -1,0 +1,11 @@
+flask
+flask_cors
+numpy
+pandas
+pinecone
+gensim
+nltk
+python_dotenv
+scikit-learn
+flask
+sentence_transformers
