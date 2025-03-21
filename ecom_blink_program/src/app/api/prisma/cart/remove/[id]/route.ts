@@ -4,24 +4,23 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export async function DELETE(
-  _: Request,
-  { params }: { params: { userId: string; productName: string } }
+  request: Request,
+  { params }: { params: { id: string } } // id is a string from the URL
 ) {
   try {
-    console.log(params.userId, params.productName);
-    const userId = parseInt(params.userId, 10);
+    const param = await params
+    const id = await param.id
+    const parsedId = parseInt(id, 10);
 
-    if (isNaN(userId)) {
-      return NextResponse.json({ message: "Invalid user ID" }, { status: 400 });
+    // Validate id
+    if (isNaN(parsedId)) {
+      return NextResponse.json({ message: "Invalid item ID" }, { status: 400 });
     }
 
-    const { productName } = params;
-
     // Delete the item from the cart
-    await prisma.cart.deleteMany({
+    await prisma.cart.delete({
       where: {
-        userId,
-        productName,
+        id: parsedId, // Use the correct field name (id)
       },
     });
 

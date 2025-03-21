@@ -4,19 +4,31 @@ import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { increaseQuantity, decreaseQuantity, removeFromCart } from "@/lib/features/cart/cartSlice";
+import { use } from 'react';
 
-interface CartProp {
-  params: {
-    userId: string;
-  };
-}
 
-const Cart = ({ params }: CartProp) => {
+const Cart = ({ params }: { params: Promise<{ userId: string }> }) => {
   const dispatch = useDispatch();
   const { items: cartItems, loading } = useSelector((state: RootState) => state.cart);
   const [solanaRate, setSolanaRate] = useState<number | null>(null);
+  const [cartProducts, setCartProducts] = useState<any[]>([]);
+
+  const {userId} = use(params)
+
  
-  // Fetch Solana price from CryptoCompare API
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        const response = await fetch(`/api/prisma/cart/getCart/${userId}`);
+        const data = await response.json();
+        setCartProducts(data);
+      } catch (error) {
+        console.error('Failed to fetch cart items:', error);
+      }
+    };
+
+    fetchCartItems();
+  }, [dispatch, userId]);
   useEffect(() => {
     const fetchSolanaPrice = async () => {
       try {
@@ -31,22 +43,22 @@ const Cart = ({ params }: CartProp) => {
     fetchSolanaPrice();
   }, []);
 
-  // Fetch products from backend
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await fetch('/api/prisma/cart/getCart');
-        const data = await response.json();
-        console.log('Fetched products:', data);
-      } catch (error) {
-        console.error('Failed to fetch products:', error);
-      }
-    };
+  
+  // useEffect(() => {
+  //   const fetchProducts = async () => {
+  //     try {
+  //       const response = await fetch(`/api/prisma/cart/getCart/${params.userId}`);
+  //       const data = await response.json();
+  //       console.log('Fetched products:', data);
+  //     } catch (error) {
+  //       console.error('Failed to fetch products:', error);
+  //     }
+  //   };
 
-    fetchProducts();
-  }, [dispatch]);
+  //   fetchProducts();
+  // }, [dispatch]);
 
-  const totalAmountUSD = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  const totalAmountUSD = cartProducts.reduce((total, item) => total + item.price * item.quantity, 0);
   const totalAmountSOL = solanaRate ? (totalAmountUSD / solanaRate).toFixed(4) : null;
 
   const handleIncrease = (productName: string) => {
@@ -57,14 +69,14 @@ const Cart = ({ params }: CartProp) => {
     dispatch(decreaseQuantity(productName));
   };
 
-  const handleRemove = async (productName: string) => {
+  const handleRemove = async (id: number) => {
     try {
-      const response = await fetch(`/api/prisma/cart/remove/${params.userId}/${productName}`, {
+      const response = await fetch(`/api/prisma/cart/remove/${id}`, {
         method: 'DELETE',
       });
-      if (response.ok) {
-        dispatch(removeFromCart(productName));
-      }
+      // if (response.ok) {
+      //   // dispatch(removeFromCart(id));
+      // }
     } catch (error) {
       console.error('Failed to remove item:', error);
     }
@@ -75,7 +87,7 @@ const Cart = ({ params }: CartProp) => {
       const response = await fetch('/api/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: params.userId, productName, quantity }),
+        body: JSON.stringify({ userId:userId, productName, quantity }),
       });
       if (response.ok) {
         alert('Purchase successful!');
@@ -95,17 +107,17 @@ const Cart = ({ params }: CartProp) => {
     
       </div>
   </div>);
-  if (!cartItems.length) return <p className="text-center text-lg text-gray-500">Your cart is empty.</p>;
+  if (!cartProducts.length) return <p className="text-center text-lg text-gray-500">Your cart is empty.</p>;
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
       <h2 className="text-3xl font-semibold text-gray-800">Your Cart</h2>
 
-      {cartItems.map((item) => (
-        <div key={item.userId} className="flex items-center justify-between bg-white shadow-md rounded-lg p-4">
+      {cartProducts.map((item) => (
+        <div key={item.id} className="flex items-center justify-between bg-white shadow-md rounded-lg p-4">
           <div className="flex items-center space-x-4">
             <img
-              src={item.imageUrl}
+              src={item.imageURL}
               alt={item.productName}
               className="w-36 h-24 object-cover rounded-lg"
             />
@@ -132,7 +144,7 @@ const Cart = ({ params }: CartProp) => {
             </button>
             <button
               className="px-3 py-1 bg-red-200 rounded-full text-sm text-red-600 hover:bg-red-300"
-              onClick={() => handleRemove(item.productName)}
+              onClick={() => handleRemove(item.id)}
             >
               Remove
             </button>
