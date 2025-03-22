@@ -31,8 +31,8 @@ import {
 // }
 
 // Constants
-
-const SELLER_ADDRESS = new PublicKey("BmQuXK4wJdLEULMvzwyiNE9p7Rj3Pg4pgFfoB1SY53pj");
+const SOL_PRICE_IN_USD: number = 129.350;
+const SELLER_ADDRESS = new PublicKey("47EiJZWwj917wKwhzEYRmQSVkbfLTcsPTPsiMC9BPWjy");
 
 // Create headers for Solana devnet
 const headers = createActionHeaders({
@@ -40,7 +40,10 @@ const headers = createActionHeaders({
 });
 
 
-
+function convertUsdToSol(usdAmount: number): number {
+  if (usdAmount <= 0) throw new Error("USD amount must be greater than 0");
+  return usdAmount / SOL_PRICE_IN_USD;
+}
 
 
 function validatePublicKey(key: string, fieldName: string): PublicKey {
@@ -68,7 +71,7 @@ export async function GET(req: Request): Promise<Response> {
   const title = url.searchParams.get("title") || "Product";
   const imageUrl = url.searchParams.get("imageUrl") || "/api/placeholder/200/200";
   const description = url.searchParams.get("description") || "Product Description";
-  const price = Number(url.searchParams.get("price"));
+  const price = Number(url.searchParams.get("price") || "10");
   
   const payload: ActionGetResponse = {
     type: "action",
@@ -79,8 +82,8 @@ export async function GET(req: Request): Promise<Response> {
     links: {
       "actions": [
         {
-          "label": "Create Escrow", 
-          "href": `/api/actions/escrow?method=create&amount=${price}&title=${title}&imageUrl=${imageUrl}&description=${description}&price=${price}`,
+          "label": "Buy Now", 
+          "href": `/api/actions/escrow?&amount=${convertUsdToSol(price)}&title=${title}&imageUrl=${imageUrl}&description=${description}&price=${price}`,
           type: "message"
         }
       ]
@@ -94,154 +97,70 @@ export const OPTIONS = GET;
 
 // POST endpoint (unchanged)
 export async function POST(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  const method = url.searchParams.get("method") || "create";
-  
-  switch (method) {
-    case "create":
-      return handleCreateEscrow(req);
-    case "confirm":
-      return handleConfirmDelivery(req);
-    default:
-      return Response.json({
-        error: "Invalid method specified"
-      }, { headers });
-  }
-
-  
-}
-
-// Create Escrow handler
-async function handleCreateEscrow(req: Request): Promise<Response> {
   try {
+    const url = new URL(req.url);
+    const method = url.searchParams.get("method") || "transfer";
+
+    if (method !== "transfer") {
+      return Response.json({ error: "Invalid method specified" }, { headers });
+    }
+
     const body: ActionPostRequest = await req.json();
     const buyerKey = body.account;
-    
-    const url = new URL(req.url);
+
     const amount = Number(url.searchParams.get("amount") || "0");
-    const title = url.searchParams.get("title") || "";
-    
+
+    if (amount <= 0) {
+      throw new Error("Amount must be greater than 0");
+    }
+
     const amountLamports = Math.floor(amount * LAMPORTS_PER_SOL);
     const buyer = validatePublicKey(buyerKey, "buyer public key");
     const seller = SELLER_ADDRESS;
 
-    const connection = new Connection('https://api.devnet.solana.com', "confirmed");
-    
-    // const programId = new PublicKey(IDL.metadata.address)
-    // const program : Program<TestBlink> = new Program(IDL,programId, {connection});
-   
+    // Initialize a connection to the Solana devnet
+    const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
- 
-    const escrowAccountHolder = Keypair.generate();
-
-    console.log(escrowAccountHolder.publicKey)
-    const transaction = new Transaction();
-    
-  
-    transaction.add(
+    // Create a transaction to transfer funds from the buyer to the seller
+    const transaction = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: buyer,
-        toPubkey: escrowAccountHolder.publicKey,
+        toPubkey: seller,
         lamports: amountLamports,
       })
     );
-    
-   
+
+    // Set the fee payer and recent blockhash
     transaction.feePayer = buyer;
     transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    
-  
-    const serialTX = transaction.serialize({ requireAllSignatures: false }).toString("base64");
-    
 
+    // Serialize the transaction (for signing by the buyer)
+    const serializedTransaction = transaction.serialize({
+      requireAllSignatures: false,
+    }).toString("base64");
+
+    // Log transaction details
     logTransactionDetails({
-      escrowAccountHolder: escrowAccountHolder.publicKey.toString(),
-      buyer: buyer.toString(),
-      amount: amountLamports,
-    });
-    
- 
-    escrowStatusMap[escrowAccountHolder.publicKey.toString()] = "pending";
-    
-    
-    return Response.json({
-      transaction: serialTX,
-      message: `Creating escrow for ${amount} SOL (${amountLamports} lamports). Funds will be held securely until you confirm delivery.`,
-      escrowAccountHolder: escrowAccountHolder.publicKey.toString(),
-    }, { headers });
-  } catch (error) {
-    console.error("Error creating escrow:", error);
-    
-    return Response.json({
-      error: "Failed to create escrow transaction",
-      details: error instanceof Error ? error.message : String(error)
-    }, { headers });
-  }
-}
-
-// Confirm Delivery handler
-async function handleConfirmDelivery(req: Request): Promise<Response> {
-  try {
-    const body = await req.json();
-    const buyerKey = body.account;
-    
-    const url = new URL(req.url);
-    const escrowAccountHolderKey = url.searchParams.get("escrowAccountHolder");
-    
-    if (!escrowAccountHolderKey) {
-      throw new Error("Escrow account holder address is required");
-    }
-    
-    const buyer = validatePublicKey(buyerKey, "buyer public key");
-    const seller = SELLER_ADDRESS;
-    const escrowAccountHolder = validatePublicKey(escrowAccountHolderKey, "escrow account holder public key");
-    const connection = new Connection(clusterApiUrl('devnet'));
-    
-    // Check if the escrow status is pending
-    // if (escrowStatusMap[escrowAccountHolder.toString()] !== "pending") {
-    //   throw new Error("Escrow is not in a pending state");
-    // }
-    
-
-    const transaction = new Transaction();
-    
- 
-    transaction.add(
-      SystemProgram.transfer({
-        fromPubkey: escrowAccountHolder,
-        toPubkey: seller,
-        lamports: await connection.getBalance(escrowAccountHolder),
-      })
-    );
-    
- 
-    transaction.feePayer = buyer;
-    transaction.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
-    
-
-    const serialTX = transaction.serialize({ requireAllSignatures: false }).toString("base64");
-    
- 
-    logTransactionDetails({
-      escrowAccountHolder: escrowAccountHolder.toString(),
       buyer: buyer.toString(),
       seller: seller.toString(),
+      amount: amountLamports,
     });
-    
-    
-    escrowStatusMap[escrowAccountHolder.toString()] = "completed";
-    
-   
-    return Response.json({
-      transaction: serialTX,
-      message: "Delivery confirmed. Funds have been released to the seller.",
-    }, { headers });
+
+    return Response.json(
+      {
+        transaction: serializedTransaction,
+        message: `Transfer of ${amount} SOL (${amountLamports} lamports) to the seller initiated.`,
+      },
+      { headers }
+    );
   } catch (error) {
-    console.error("Error confirming delivery:", error);
-    
-    return Response.json({
-      error: "Failed to confirm delivery",
-      details: error instanceof Error ? error.message : String(error)
-    }, { headers });
+    console.error("Error initiating direct transfer:", error);
+    return Response.json(
+      {
+        error: "Failed to initiate direct transfer",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { headers }
+    );
   }
 }

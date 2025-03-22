@@ -52,11 +52,11 @@ const DisplayCartItems: React.FC<CartProps> = ({
     );
   }
 
-  const handleBuyNow = (productName: string, imageURL: string, description?: string) => {
-    const totalPriceSOL = totalAmountSOL ? parseFloat(totalAmountSOL) : 0;
-
+  const handleBuyNow = (productName: string, imageURL: string,  price: number, quantity: number,description?: string) => {
+    const totalPriceSOL = totalAmountSOL;
+    console.log(price * quantity)
     // Open the purchase link in a new tab
-    const productUrl = `http://localhost:3000/api/actions/escrow?title=${encodeURIComponent(productName)}&imageUrl=${encodeURIComponent(imageURL)}&description=${encodeURIComponent(description || "")}&price=${totalPriceSOL}`;
+    const productUrl = `http://localhost:3000/api/actions/escrow?title=${encodeURIComponent(productName)}&imageUrl=${encodeURIComponent(imageURL)}&description=${encodeURIComponent(description || "")}&price=${price * quantity}`;
     const purchaseLink = `https://dial.to/developer?url=${encodeURIComponent(productUrl)}&cluster=devnet`;
     window.open(purchaseLink, "_blank");
   };
@@ -103,7 +103,7 @@ const DisplayCartItems: React.FC<CartProps> = ({
               </button>
               <button
                 className={`px-3 py-1 ${darkMode ? "bg-green-600" : "bg-green-200"} rounded-full text-sm ${darkMode ? "text-white" : "text-green-600"} hover:${darkMode ? "bg-green-700" : "bg-green-300"}`}
-                onClick={() => handleBuyNow(item.productName, item.imageURL, item.description)}
+                onClick={() => handleBuyNow(item.productName, item.imageURL,item.quantity, item.price,item.description)}
               >
                 Buy Now
               </button>

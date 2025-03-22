@@ -14,24 +14,24 @@ function LoginComp() {
   const [mode, setMode] = useState("signup");
   const [signature, setSignature] = useState<string | null>(null);
 
-  const handleSignMessage = useCallback(async () => {
-    if (!publicKey || !signMessage) {
-      alert("Please connect your wallet first!");
-      return;
-    }
+  // const handleSignMessage = useCallback(async () => {
+  //   if (!publicKey || !signMessage) {
+  //     alert("Please connect your wallet first!");
+  //     return;
+  //   }
 
-    try {
-      const message = new TextEncoder().encode("Authenticate with Solana via Phantom Wallet");
-      const signedMessage = await signMessage(message);
-      const signatureBase64 = Buffer.from(signedMessage).toString("base64");
+  //   try {
+  //     const message = new TextEncoder().encode("Authenticate with Solana via Phantom Wallet");
+  //     const signedMessage = await signMessage(message);
+  //     const signatureBase64 = Buffer.from(signedMessage).toString("base64");
 
-      setSignature(signatureBase64);
-      alert("Signed message successfully!");
-    } catch (error) {
-      console.error("Signing error:", error);
-      alert("Failed to sign the message.");
-    }
-  }, [publicKey, signMessage]);
+  //     setSignature(signatureBase64);
+  //     alert("Signed message successfully!");
+  //   } catch (error) {
+  //     console.error("Signing error:", error);
+  //     alert("Failed to sign the message.");
+  //   }
+  // }, [publicKey, signMessage]);
 
   return (
     <div className="bg-black">
@@ -43,23 +43,23 @@ function LoginComp() {
             background: "linear-gradient(180deg, rgba(18,9,121,1) 11%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%)",
           }}
         >
-          <WalletMultiButton />
+          {/* <WalletMultiButton />
           {publicKey && (
             <p className="text-sm mt-2">
               Connected: <span className="font-bold">{publicKey.toBase58()}</span>
             </p>
-          )}
-          <button
+          )} */}
+          {/* <button
             className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
             onClick={handleSignMessage}
           >
             Sign Message
-          </button>
-          {signature && (
+          </button> */}
+          {/* {signature && (
             <p className="text-sm text-gray-400 mt-2 break-all">
               Signature: {signature}
             </p>
-          )}
+          )} */}
           <Header />
           {mode === "signup" && <SignUp />}
         </div>

@@ -12,13 +12,13 @@ export const POST = async (req: Request) => {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
-    // Check if item already exists in the cart
+  
     const existingItem = await prisma.cart.findFirst({
       where: { userId, productName },
     });
 
     if (existingItem) {
-      // Update quantity if product already exists
+     
       const updatedItem = await prisma.cart.update({
         where: { id: existingItem.id },
         data: { quantity: existingItem.quantity + (quantity || 1) },
@@ -26,7 +26,7 @@ export const POST = async (req: Request) => {
 
       return NextResponse.json(updatedItem, { status: 200 });
     } else {
-      // Add a new item to the cart
+     
       const newCartItem = await prisma.cart.create({
         data: {
           userId,
@@ -34,7 +34,7 @@ export const POST = async (req: Request) => {
           imageURL,
           description,
           price,
-          quantity: quantity || 1,
+          quantity: quantity,
         },
       });
 

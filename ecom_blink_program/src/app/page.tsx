@@ -13,16 +13,18 @@ function App() {
 
 
     if (status=="authenticated") {
-      router.push('/'); // Redirect to home if session exists
+      router.push('/chat'); // Redirect to home if session exists
     } else {
-      router.push('/login'); // Redirect to login if no session
+      router.push('/home'); // Redirect to login if no session
     }
   }, [session, router]);
 
   return (
-    <div>
-      
-      <ChatBot />
+    <div style={{
+      background: "linear-gradient(180deg, rgba(18,9,121,1) 11%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%)",
+    }}>
+     
+    
     </div>
   );
 }

@@ -92,7 +92,7 @@ def search_products():
         search_results = index.query(
             namespace="product-namespace",
             vector=query_embedding.tolist(),
-            top_k=5,
+            top_k=7,
             include_metadata=True
         )
 

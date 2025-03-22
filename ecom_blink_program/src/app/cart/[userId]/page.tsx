@@ -7,18 +7,22 @@ import { use } from 'react';
 import DisplayCartItems from "@/components/DisplayCartItems";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-
+import { useRouter } from 'next/navigation';
+import { useSession } from "next-auth/react";
 
 const Cart = ({ params }: { params: Promise<{ userId: string }> }) => {
   const dispatch = useDispatch();
   const { items: cartItems, loading } = useSelector((state: RootState) => state.cart);
   const [solanaRate, setSolanaRate] = useState<number | null>(null);
   const [cartProducts, setCartProducts] = useState<any[]>([]);
-
+  const {data: session, status} = useSession();
   const {userId} = use(params);
-  
 
   
+const router = useRouter();
+  if(status !== "authenticated"){
+    router.push('/home');
+  }
  
   useEffect(() => {
     const fetchCartItems = async () => {
@@ -50,7 +54,7 @@ const Cart = ({ params }: { params: Promise<{ userId: string }> }) => {
 
   const totalAmountUSD = cartProducts.reduce((total, item) => total + item.price * item.quantity, 0);
   const totalAmountSOL = solanaRate ? (totalAmountUSD / solanaRate).toFixed(4) : null;
-
+  console.log(totalAmountSOL)
   const handleIncrease = (productName: string) => {
     dispatch(increaseQuantity(productName));
   };
