@@ -18,7 +18,6 @@ import {
 } from "@solana/web3.js";
 
 
-const IDL = require('@/../anchor/target/idl/test_blink.json')
 // const endpoint = "https://orbital-powerful-slug.solana-devnet.quiknode.pro/5f829c00d61ba0f278b779fabd801414b22bf994/";
 // const solanaConnection = new Connection(endpoint);
 
@@ -32,7 +31,7 @@ const IDL = require('@/../anchor/target/idl/test_blink.json')
 // }
 
 // Constants
-const SOL_PRICE_IN_USD: number = 129.350;
+
 const SELLER_ADDRESS = new PublicKey("BmQuXK4wJdLEULMvzwyiNE9p7Rj3Pg4pgFfoB1SY53pj");
 
 // Create headers for Solana devnet
@@ -41,10 +40,7 @@ const headers = createActionHeaders({
 });
 
 
-function convertUsdToSol(usdAmount: number): number {
-  if (usdAmount <= 0) throw new Error("USD amount must be greater than 0");
-  return usdAmount / SOL_PRICE_IN_USD;
-}
+
 
 
 function validatePublicKey(key: string, fieldName: string): PublicKey {
@@ -60,6 +56,8 @@ function logTransactionDetails(details: Record<string, any>) {
   console.log("Transaction Details:", JSON.stringify(details, null, 2));
 }
 
+
+
 // In-memory storage for escrow status (replace with a database in production)
 const escrowStatusMap: Record<string, "pending" | "completed"> = {};
 
@@ -70,7 +68,7 @@ export async function GET(req: Request): Promise<Response> {
   const title = url.searchParams.get("title") || "Product";
   const imageUrl = url.searchParams.get("imageUrl") || "/api/placeholder/200/200";
   const description = url.searchParams.get("description") || "Product Description";
-  const price = Number(url.searchParams.get("price") || "10");
+  const price = Number(url.searchParams.get("price"));
   
   const payload: ActionGetResponse = {
     type: "action",
@@ -82,7 +80,7 @@ export async function GET(req: Request): Promise<Response> {
       "actions": [
         {
           "label": "Create Escrow", 
-          "href": `/api/actions/escrow?method=create&amount=${convertUsdToSol(price)}&title=${title}&imageUrl=${imageUrl}&description=${description}&price=${price}`,
+          "href": `/api/actions/escrow?method=create&amount=${price}&title=${title}&imageUrl=${imageUrl}&description=${description}&price=${price}`,
           type: "message"
         }
       ]
@@ -199,7 +197,7 @@ async function handleConfirmDelivery(req: Request): Promise<Response> {
     const escrowAccountHolder = validatePublicKey(escrowAccountHolderKey, "escrow account holder public key");
     const connection = new Connection(clusterApiUrl('devnet'));
     
-    // // Check if the escrow status is pending
+    // Check if the escrow status is pending
     // if (escrowStatusMap[escrowAccountHolder.toString()] !== "pending") {
     //   throw new Error("Escrow is not in a pending state");
     // }

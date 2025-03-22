@@ -14,6 +14,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { addToCartAsync,decreaseQuantity, increaseQuantity } from "@/lib/features/cart/cartSlice";
+import Navbar from "./NavBar";
 interface Message {
   text: string | JSX.Element; // Allow JSX elements
   isBot: boolean;
@@ -50,6 +51,8 @@ const ChatBot = () => {
   ]);
   const cartItems = useAppSelector((state) => state.cart.items);
   const router = useRouter();
+  
+
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -64,7 +67,7 @@ const ChatBot = () => {
         console.error("Error fetching user details:", error);
       }
     };
-    
+
     fetchUserDetails();
   }, [session]);
 
@@ -325,118 +328,68 @@ const ChatBot = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? "dark:bg-black" : "bg-gray-50"}`}>
-      <div className="flex justify-between items-center mb-8 w-full p-4">
-        <h1 className="text-2xl font-bold dark:text-white flex items-center gap-2">
-          <Bot className="w-8 h-8" /> AI E-commerce Assistant
-        </h1>
-        <div className="flex items-center gap-8">
-          {/* Cart Popover */}
-          <Popover>
-            <PopoverTrigger className="relative">
-              <FaOpencart size={30} />
-              {cartItems.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                  {cartItems.length}
-                </span>
-              )}
-            </PopoverTrigger>
-            <PopoverContent className=" w-full max-w-[20rem] mt-3">
-              <h3 className="text-lg font-bold mb-2">Cart</h3>
-              {cartItems.length === 0 ? (
-                <p className="text-sm text-gray-500">Your cart is empty.</p>
-              ) : (
-                cartItems.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center border-b py-2">
-                    <img src={item.imageUrl} alt={item.productName} className="w-20 h-12 object-cover" />
-                    <div className="flex-1 px-2">
-                      <p className="text-sm font-medium">{item.productName}</p>
-                      <p className="text-xs text-gray-500">${item.price} x {item.quantity}</p>
-                    </div>
-                    <div className="flex items-center">
-                      <button onClick={() => dispatch(decreaseQuantity(item.productName))} className="px-2 bg-gray-200 rounded">-</button>
-                      <span className="mx-2">{item.quantity}</span>
-                      <button onClick={() => dispatch(increaseQuantity(item.productName))} className="px-2 bg-gray-200 rounded">+</button>
-                    </div>
+    {/* Use the Navbar component */}
+    <Navbar darkMode={darkMode} setDarkMode={setDarkMode} userId={userId} />
 
-                 
-                  
-                  </div>
-                )
-              )
-                
-                
-              )}
-                  <div className=" flex justify-center w-full mt-4" onClick={() => router.push(`cart/${userId}` )}>
-                    <Button>Checkout</Button>
-                  </div>
-            </PopoverContent>
-          </Popover>
-          <Button onClick={() => signOut()}>Log Out</Button>
-          <button onClick={() => setDarkMode(!darkMode)}>{darkMode ? <Sun /> : <Moon />}</button>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto p-4">
-        <div className="bg-white dark:bg-black rounded-lg shadow-lg h-[600px] flex flex-col">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.map((message, index) => (
-              <div key={index} className={`flex items-start gap-2 ${message.isBot ? "" : "flex-row-reverse"}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center`}>
-                  {message.isBot ? <Bot size={30} /> : <User size={30} />}
-                </div>
-                <div
-                  className={`rounded-lg p-4 max-w-[80%] ${
-                    message.isBot
-                      ? "bg-blue-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
-                      : "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
-                  }`}
-                >
-                  {message.text} 
-                </div>
+    <div className="max-w-4xl mx-auto p-4">
+      <div className="bg-white dark:bg-black rounded-lg shadow-lg h-[600px] flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message, index) => (
+            <div key={index} className={`flex items-start gap-2 ${message.isBot ? "" : "flex-row-reverse"}`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center`}>
+                {message.isBot ? <Bot size={30} /> : <User size={30} />}
               </div>
-            ))}
-
-
-
-            {typing && (
-              <div className="flex items-start gap-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center">
-                  <Bot size={30} />
-                </div>
-                <div className="bg-blue-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 rounded-lg p-4 max-w-[80%]">
-                  <div className="flex gap-1">
-                    <span className="h-2 w-2 bg-gray-500 dark:bg-gray-300 rounded-full animate-bounce"></span>
-                    <span className="h-2 w-2 bg-gray-500 dark:bg-gray-300 rounded-full animate-bounce delay-150"></span>
-                    <span className="h-2 w-2 bg-gray-500 dark:bg-gray-300 rounded-full animate-bounce delay-300"></span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          <form onSubmit={handleSubmit} className="p-4 border-t dark:border-gray-800">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-1 rounded-lg border dark:border-b-gray-900 p-4 focus:outline-white focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white"
-              />
-              <button
-                type="submit"
-                className="bg-white text-black rounded-lg px-4 py-2 transition-colors flex items-center gap-2 dark:bg-black dark:text-white"
-                disabled={!userId || typing}
+              <div
+                className={`rounded-lg p-4 max-w-[80%] ${
+                  message.isBot
+                    ? "bg-blue-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
+                    : "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
+                }`}
               >
-                <Send size={20} />
-              </button>
+                {message.text}
+              </div>
             </div>
-          </form>
+          ))}
+
+          {typing && (
+            <div className="flex items-start gap-2">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center">
+                <Bot size={30} />
+              </div>
+              <div className="bg-blue-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 rounded-lg p-4 max-w-[80%]">
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 bg-gray-500 dark:bg-gray-300 rounded-full animate-bounce"></span>
+                  <span className="h-2 w-2 bg-gray-500 dark:bg-gray-300 rounded-full animate-bounce delay-150"></span>
+                  <span className="h-2 w-2 bg-gray-500 dark:bg-gray-300 rounded-full animate-bounce delay-300"></span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
         </div>
+
+        <form onSubmit={handleSubmit} className="p-4 border-t dark:border-gray-800">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type your message..."
+              className="flex-1 rounded-lg border dark:border-b-gray-900 p-4 focus:outline-white focus:ring-2 focus:ring-blue-500 dark:bg-black dark:text-white"
+            />
+            <button
+              type="submit"
+              className="bg-white text-black rounded-lg px-4 py-2 transition-colors flex items-center gap-2 dark:bg-black dark:text-white"
+              disabled={!userId || typing}
+            >
+              <Send size={20} />
+            </button>
+          </div>
+        </form>
       </div>
     </div>
+  </div>
   );
 };
 
