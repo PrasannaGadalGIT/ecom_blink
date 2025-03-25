@@ -1,7 +1,7 @@
 // File: /api/actions/escrow.ts
-import { Program } from "@project-serum/anchor";
+
 import {
-  ActionPostResponse,
+  
   createActionHeaders,
   ActionGetResponse,
   ActionPostRequest,
@@ -14,7 +14,7 @@ import {
   Connection,
   clusterApiUrl,
   SystemProgram,
-  Keypair,
+
 } from "@solana/web3.js";
 
 
@@ -50,19 +50,17 @@ function validatePublicKey(key: string, fieldName: string): PublicKey {
   try {
     return new PublicKey(key);
   } catch (error) {
-    throw new Error(`Invalid ${fieldName}: ${key}`);
+    throw new Error(`Invalid ${fieldName}: ${key} , ${error}`);
   }
 }
 
 
-function logTransactionDetails(details: Record<string, any>) {
+function logTransactionDetails(details: Record<string, object>) {
   console.log("Transaction Details:", JSON.stringify(details, null, 2));
 }
 
 
 
-// In-memory storage for escrow status (replace with a database in production)
-const escrowStatusMap: Record<string, "pending" | "completed"> = {};
 
 // GET endpoint (unchanged)
 export async function GET(req: Request): Promise<Response> {

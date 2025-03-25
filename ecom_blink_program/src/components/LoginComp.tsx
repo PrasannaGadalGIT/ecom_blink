@@ -5,15 +5,11 @@ import Border from "./Border";
 import Header from "./Header";
 import SignUp from "./SignUp";
 import SignUpForm from "./SignUpForm";
-import React, { useState, useCallback } from "react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { PublicKey } from "@solana/web3.js";
-import {  useWallet } from '@solana/wallet-adapter-react'
+import React, { useState } from "react";
 function LoginComp() {
-  const { publicKey, signMessage } = useWallet();
-  const [mode, setMode] = useState("signup");
-  const [signature, setSignature] = useState<string | null>(null);
 
+  const [mode, setMode] = useState("signup");
+  
   // const handleSignMessage = useCallback(async () => {
   //   if (!publicKey || !signMessage) {
   //     alert("Please connect your wallet first!");

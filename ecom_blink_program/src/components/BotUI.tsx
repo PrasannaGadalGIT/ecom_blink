@@ -1,15 +1,13 @@
 "use client";
 import React, { useState, useEffect, useRef, JSX } from "react";
-import { Sun, Moon, Send, Bot, User } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
-import { Button } from "./ui/button";
+import {  Send, Bot, User } from "lucide-react";
+import {  useSession } from "next-auth/react";
+
 import axios from "axios";
 import { FaOpencart } from "react-icons/fa";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 
+import Image from "next/image";
 
-import { addToCart } from "@/lib/features/cart/cartSlice";
-import NavBar from "./NavBar";
 interface Message {
   text: string | JSX.Element; // Allow JSX elements
   isBot: boolean;
@@ -29,10 +27,10 @@ interface ChatResponse {
   productName: string;
 }
 const BotUI = () => {
-    const [darkMode, setDarkMode] = useState(false);
+  
     const [typing, setTyping] = useState<boolean>(false);
     const [input, setInput] = useState("");
-    const [currentChatId, setCurrentChatId] = useState<number | null>(null);
+  
     const [userId, setUserId] = useState<number | null>(null);
     const { data: session } = useSession();
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -63,9 +61,7 @@ const BotUI = () => {
       fetchUserDetails();
     }, [session]);
   
-    useEffect(() => {
-      document.documentElement.classList.toggle("dark", darkMode);
-    }, [darkMode]);
+ 
   
     useEffect(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,25 +84,25 @@ const BotUI = () => {
         return null;
       }
     };
-    const dispatch = useAppDispatch();
-    const addToCart = (cartDetail: {
-      productName: string;
-      imageUrl: string;
-      description: string;
-      price: number;
+  
+    // const addToCart = (cartDetail: {
+    //   productName: string;
+    //   imageUrl: string;
+    //   description: string;
+    //   price: number;
    
-    }) => {
-      // dispatch(
-      //   addToCart({
-      //     id: cartDetail.productName, // Use a unique ID (consider adding UUID or another identifier)
-      //     name: cartDetail.productName,
-      //     imageUrl: cartDetail.imageUrl,
-      //     description: cartDetail.description,
-      //     price: cartDetail.price,
-      //     quantity: 1, 
-      //   })
-      // );
-    };
+    // }) => {
+    //   // dispatch(
+    //   //   addToCart({
+    //   //     id: cartDetail.productName, // Use a unique ID (consider adding UUID or another identifier)
+    //   //     name: cartDetail.productName,
+    //   //     imageUrl: cartDetail.imageUrl,
+    //   //     description: cartDetail.description,
+    //   //     price: cartDetail.price,
+    //   //     quantity: 1, 
+    //   //   })
+    //   // );
+    // };
   
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -126,7 +122,7 @@ const BotUI = () => {
       try {
         // First create a chat entry in the database
         const chatId = await createChat(userQuery);
-        setCurrentChatId(chatId);
+      
   
         // Then send to your AI backend
         const response = await axios.post<{ response: Response[] }>("http://127.0.0.1:5000/generate", {
@@ -144,7 +140,7 @@ const BotUI = () => {
               </strong>
               <br />
               <br />
-              <img
+              <Image
                 src={item.ImageURL}
                 alt={item.ProductName}
                 width={400}
@@ -155,15 +151,15 @@ const BotUI = () => {
               </p>
               <br />
               <button
-                onClick={() =>
-                  addToCart({
-                    productName: item.ProductName,
-                    imageUrl: item.ImageURL,
-                    description: item.Description,
-                    price: item.Price,
+                // onClick={() =>
+                //   addToCart({
+                //     productName: item.ProductName,
+                //     imageUrl: item.ImageURL,
+                //     description: item.Description,
+                //     price: item.Price,
                     
-                  })
-                }
+                //   })
+                // }
                 style={{
                   display: "inline-block",
                   backgroundColor: "black",

@@ -5,11 +5,10 @@ const prisma = new PrismaClient();
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } } // id is a string from the URL
+  context: { params: { id: string } } // Corrected the type
 ) {
   try {
-    const param = await params
-    const id = await param.id
+    const id = context.params.id; // Extract id properly
     const parsedId = parseInt(id, 10);
 
     // Validate id
@@ -19,9 +18,7 @@ export async function DELETE(
 
     // Delete the item from the cart
     await prisma.cart.delete({
-      where: {
-        id: parsedId, // Use the correct field name (id)
-      },
+      where: { id: parsedId }, // Ensure `id` is a number if your DB uses integers
     });
 
     return NextResponse.json(

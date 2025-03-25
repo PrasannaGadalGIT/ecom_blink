@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-
+interface Resposne {
+  description: string;
+  imageURL : string;
+  price: number;
+  productName: string
+}
 // GET - Fetch chats (with optional filtering by userId)
 export async function GET(request: Request) {
   try {
@@ -49,7 +54,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    let body= await request.json();
+    const body= await request.json();
     
   
     
@@ -78,7 +83,7 @@ export async function POST(request: Request) {
         userId: body.userId,
         // If responses are provided, create them as well
         responses: body.responses ? {
-          create: body.responses.map((resp: any) => ({
+          create: body.responses.map((resp: Resposne) => ({
             description: resp.description,
             imageURL: resp.imageURL,
             price: resp.price,

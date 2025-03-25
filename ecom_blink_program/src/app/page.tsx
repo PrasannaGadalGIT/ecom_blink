@@ -1,7 +1,7 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import ChatBot from '../components/ChatBot';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+
 import { useSession } from 'next-auth/react';
 
 function App() {
@@ -13,11 +13,11 @@ function App() {
 
 
     if (status=="authenticated") {
-      router.push('/chat'); // Redirect to home if session exists
+      router.push('/chat'); 
     } else {
-      router.push('/home'); // Redirect to login if no session
+      router.push('/home'); 
     }
-  }, [session, router]);
+  }, [session, router, status]);
 
   return (
     <div style={{

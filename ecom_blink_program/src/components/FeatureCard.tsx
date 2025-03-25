@@ -5,7 +5,7 @@ import { useInView } from 'react-intersection-observer';
 
 
 
-export const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => {
+export const FeatureCard = ({ icon: Icon, title, description }: { icon: string, title: string, description: string }) => {
     const [ref, inView] = useInView({
       triggerOnce: true,
       threshold: 0.1,

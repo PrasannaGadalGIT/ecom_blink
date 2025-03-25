@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "@/lib/store";
-import { increaseQuantity, decreaseQuantity, removeFromCart } from "@/lib/features/cart/cartSlice";
+import { increaseQuantity, decreaseQuantity } from "@/lib/features/cart/cartSlice";
 import { use } from 'react';
 import DisplayCartItems from "@/components/DisplayCartItems";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
@@ -12,10 +12,10 @@ import { useSession } from "next-auth/react";
 
 const Cart = ({ params }: { params: Promise<{ userId: string }> }) => {
   const dispatch = useDispatch();
-  const { items: cartItems, loading } = useSelector((state: RootState) => state.cart);
+  const {  loading } = useSelector((state: RootState) => state.cart);
   const [solanaRate, setSolanaRate] = useState<number | null>(null);
-  const [cartProducts, setCartProducts] = useState<any[]>([]);
-  const {data: session, status} = useSession();
+  const [cartProducts, setCartProducts] = useState<[]>([]);
+  const { status} = useSession();
   const {userId} = use(params);
 
   

@@ -1,8 +1,7 @@
 "use client"
-import { ConnectionProvider, useWallet, WalletProvider } from '@solana/wallet-adapter-react';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import {
-    WalletModalProvider,
-    WalletMultiButton
+    WalletModalProvider
 } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 
@@ -11,7 +10,11 @@ import { useSession } from 'next-auth/react';
 
 
 const Login = () => {
-  const {data : session} = useSession();
+  const { status} = useSession();
+
+  if(status === "authenticated"){
+    
+  }
 
   
 

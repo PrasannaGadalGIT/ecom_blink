@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-
+interface Resposne {
+  description: string;
+  imageURL : string;
+  price: number;
+  productName: string
+}
 export async function POST(request: NextRequest) {
   try {
 
@@ -30,12 +35,12 @@ export async function POST(request: NextRequest) {
 
   
     const createdResponses = await prisma.$transaction(
-      responses.map((item: any) =>
+      responses.map((item: Resposne) =>
         prisma.response.create({
           data: {
             description: item.description || "",
             imageURL: item.imageURL || "",
-            price: parseFloat(item.price || 0),
+            price: (item.price || 0),
             productName: item.productName || "",
             chatId: parseInt(chatId),
           },

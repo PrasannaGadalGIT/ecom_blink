@@ -4,12 +4,13 @@ import {  Send, Bot, User } from "lucide-react";
 import {  useSession } from "next-auth/react";
 import axios from "axios";
 import { FaOpencart } from "react-icons/fa";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useAppDispatch } from "@/lib/hooks";
 
-import { useRouter } from "next/navigation";
+
 
 import { addToCartAsync } from "@/lib/features/cart/cartSlice";
 import Navbar from "./NavBar";
+import Image from "next/image";
 interface Message {
   text: string | JSX.Element; // Allow JSX elements
   isBot: boolean;
@@ -49,8 +50,8 @@ const ChatBot = () => {
       isBot: true,
     },
   ]);
-  const cartItems = useAppSelector((state) => state.cart.items);
-  const router = useRouter();
+  // const cartItems = useAppSelector((state) => state.cart.items);
+  // const router = useRouter();
   
 
 
@@ -87,7 +88,7 @@ const ChatBot = () => {
       if (response.data && Array.isArray(response.data)) {
         const chatHistory: Message[] = [];
   
-        response.data.forEach((chat: any) => {
+        response.data.forEach((chat) => {
           
           chatHistory.push({
             text: chat.query,
@@ -99,12 +100,12 @@ const ChatBot = () => {
             const botMessage: Message = {
               text: (
                 <div>
-                  {chat.responses.map((item: any, index: number) => (
+                  {chat.responses.map((item: Products, index: number) => (
                     <div key={index}>
                       <br />
-                      <strong>{index + 1}. {item.productName}</strong>
+                      <strong>{index + 1}. {item.title}</strong>
                       <br /><br />
-                      <img src={item.imageURL} alt={item.productName} width={400} className="mb-4 rounded-lg" />
+                      <Image src={item.image_url} alt={item.title} width={400} className="mb-4 rounded-lg" />
                       <p>
                         <strong>Description: </strong>{item.description} <br /><br /> under price <strong>$ {item.price}</strong>
                       </p>
@@ -112,8 +113,8 @@ const ChatBot = () => {
                       <button
                         onClick={() =>
                           handleAddToCart({
-                            productName: item.productName,
-                            imageUrl: item.imageURL,
+                            productName: item.title,
+                            imageUrl: item.image_url,
                             description: item.description,
                             price: item.price,
                             userId: userId,
@@ -155,7 +156,7 @@ const ChatBot = () => {
     if (userId) {
       getChats(userId);
     }
-  }, [userId]);
+  }, [userId, getChats]);
   
 
 
@@ -178,7 +179,7 @@ const ChatBot = () => {
     }
   };
   const dispatch = useAppDispatch();
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const handleAddToCart =async (cartDetail: {
     productName: string;
     imageUrl: string;
@@ -194,7 +195,7 @@ const ChatBot = () => {
       userId: cartDetail.userId,
       quantity: 1
     }));
-    setLoading(true);
+ 
     try {
       await axios.post("/api/prisma/cart/add", {
         userId,
@@ -209,11 +210,11 @@ const ChatBot = () => {
       console.error("Error adding to cart:", error);
       alert("Failed to add item to cart.");
     }
-    setLoading(false);
+   
   };
 
 
-  const [generated_responses, setGeneratedResponse] = useState("")
+ 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !userId) return;
@@ -256,7 +257,7 @@ const ChatBot = () => {
             </strong>
             <br />
             <br />
-            <img
+            <Image
               src={item.image_url}
               alt={item.title}
               width={300}

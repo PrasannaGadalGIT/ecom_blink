@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Button } from './ui/button';
-import axios from 'axios';
 
 interface SignUpForm {
   mode: string,
 }
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { Connection, PublicKey, SystemProgram } from "@solana/web3.js";
-import { Program, AnchorProvider } from "@project-serum/anchor";
+import {  useWallet } from "@solana/wallet-adapter-react";
+
 
 
 const SignUpForm: React.FC<SignUpForm> = ({ mode }) => {
@@ -133,7 +131,5 @@ const SignUpForm: React.FC<SignUpForm> = ({ mode }) => {
 };
 
 export default SignUpForm;
-function clusterApiUrl(arg0: string): any {
-  throw new Error('Function not implemented.');
-}
+
 

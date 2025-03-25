@@ -1,8 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import NavBar from "./NavBar"; // Import the NavBar component
+import Image from "next/image";
 
 interface CartItem {
   id: number;
@@ -28,11 +28,9 @@ const DisplayCartItems: React.FC<CartProps> = ({
   cartProducts,
   totalAmountUSD,
   totalAmountSOL,
-  loading,
-  onIncrease,
-  onDecrease,
+
   onRemove,
-  onPurchase,
+
 }) => {
   const [darkMode, setDarkMode] = useState(false);
 
@@ -53,7 +51,7 @@ const DisplayCartItems: React.FC<CartProps> = ({
   }
 
   const handleBuyNow = (productName: string, imageURL: string,  price: number, quantity: number,description?: string) => {
-    const totalPriceSOL = totalAmountSOL;
+    // const totalPriceSOL = totalAmountSOL;
     console.log(price * quantity)
     // Open the purchase link in a new tab
     const productUrl = `http://localhost:3000/api/actions/escrow?title=${encodeURIComponent(productName)}&imageUrl=${encodeURIComponent(imageURL)}&description=${encodeURIComponent(description || "")}&price=${price * quantity}`;
@@ -81,7 +79,7 @@ const DisplayCartItems: React.FC<CartProps> = ({
         {cartProducts.map((item) => (
           <div key={item.id} className={`flex items-center justify-between ${darkMode ? "bg-gray-800" : "bg-white"} shadow-md rounded-lg p-4`}>
             <div className="flex items-center space-x-4">
-              <img
+              <Image
                 src={item.imageURL}
                 alt={item.productName}
                 className="w-36 h-24 object-cover rounded-lg"
