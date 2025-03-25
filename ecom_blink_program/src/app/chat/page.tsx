@@ -7,7 +7,7 @@ const Chat = () => {
       const { data: session, status } = useSession();
           const router = useRouter();
       if(status !== "authenticated"){
-        router.push('/home'); 
+        router.push('/login'); 
       }
   return (
     <div>

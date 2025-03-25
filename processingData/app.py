@@ -1,120 +1,121 @@
 from flask import Flask, request, jsonify
-import json
-import numpy as np
-import pandas as pd
-import string
+from pymongo import MongoClient
+from dotenv import load_dotenv
 import os
-
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from gensim.models import Word2Vec
-from pinecone import Pinecone
+import numpy as np
+import faiss
+from sentence_transformers import SentenceTransformer
 from flask_cors import CORS
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
+# Load environment variables
+load_dotenv()
 
-
-PINECONE_API_KEY = "pcsk_5BoCaa_7KFxqRG8hCmz6A4HUvFDJqSK4drKjfo4C7kXpG8oyjZpqAVDwDi4RQHEN9hS1Xq"
-
-if not PINECONE_API_KEY:
-    raise ValueError("PINECONE_API_KEY is not set in the .env file")
-
-# ✅ Initialize Flask
+# Initialize Flask app
 app = Flask(__name__)
 CORS(app)
-# ✅ Load Product Data
-with open("structured_training_data.json", "rb") as f:
-    data = json.load(f)
 
-df = pd.DataFrame(data)
+# MongoDB Connection
+client = MongoClient(os.getenv("MONGO_DB_URI"))
+db = client["ecommerce"]
 
-# ✅ Text Preprocessing (Tokenization, Stopwords Removal, Lemmatization)
-stopWords = set(stopwords.words("english"))
-lemmatizer = WordNetLemmatizer()
+encoder = SentenceTransformer("all-MiniLM-L6-v2")
 
-def preprocessText(text):
-    words = word_tokenize(text.lower())  # Lowercase & tokenize
-    words = [lemmatizer.lemmatize(word) for word in words if word not in stopWords and word not in string.punctuation]
-    return words
 
-df["TokenizedName"] = df["Name"].apply(preprocessText)
+gpt_model = GPT2LMHeadModel.from_pretrained("gpt2")
+gpt_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 
-# ✅ Train Word2Vec Model on Product Names (If not already trained)
-word2vecModel = Word2Vec(sentences=df["TokenizedName"], vector_size=768, window=5, min_count=1, workers=4)
-word2vecModel.save("word2vec_product_model.model")  # Save the model
 
-# ✅ Load the Word2Vec Model
-word2vecModel = Word2Vec.load("word2vec_product_model.model")  # Load the model
+def initialize_system():
+    products = list(db.products.find({}, {
+        "title": 1, "description": 1, "categories": 1,
+        "rating": 1, "final_price": 1, "image_url": 1,
+        "asin": 1, "embedding": 1
+    }))
 
-# ✅ Convert Product Names to Vector Embeddings
-def get_product_embedding(product_name, model):
-    words = preprocessText(product_name)  # Tokenize & process
-    word_vectors = [model.wv[word] for word in words if word in model.wv]
+    
+    for product in products:
+        product["rating"] = float(product["rating"])
+        product["final_price"] = float(str(product["final_price"]).strip('"'))
 
-    if word_vectors:
-        return np.mean(word_vectors, axis=0)  # Return average vector
-    else:
-        return np.zeros(model.vector_size)  # Return zero vector if no match
+    embeddings = np.array([p["embedding"] for p in products if "embedding" in p], dtype="float32")
 
-df["VectorEmbedding"] = df["Name"].apply(lambda name: get_product_embedding(name, word2vecModel))
+    if embeddings.shape[0] == 0:
+        raise ValueError("No valid embeddings found in MongoDB")
 
-# ✅ Initialize Pinecone
-pc = Pinecone(api_key=PINECONE_API_KEY)
+    index = faiss.IndexFlatIP(embeddings.shape[1])
+    index.add(embeddings)
 
-index_name = "product-index"
+    return index, products
 
-index = pc.Index(index_name)
+index, products = initialize_system()
 
-# ✅ Process User Query
-def get_query_embedding(query, model):
-    words = preprocessText(query)
-    word_vectors = [model.wv[word] for word in words if word in model.wv]
 
-    if word_vectors:
-        return np.mean(word_vectors, axis=0)
-    else:
-        return np.zeros(model.vector_size)
+def generate_response(products):
+    product_names = [product["title"] for product in products]
 
-@app.route('/generate', methods=['POST'])
+    
+
+    # Interactive chat prompt
+    chat_prompt = (
+        "Great choices! 😊 Are you looking for something specific today? "
+        "Do you have any preferences, like brand or budget? I'm happy to help!"
+    )
+
+    inputs = gpt_tokenizer.encode(chat_prompt, return_tensors="pt")
+    outputs = gpt_model.generate(inputs, max_length=200, num_return_sequences=1)
+    response = gpt_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    return f"\n\n{response}"
+
+# API Route for Product Search
+@app.route("/search", methods=["POST"])
 def search_products():
     try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No JSON data provided"}), 400
-            
+        data = request.json
         query = data.get("query", "").strip()
+        min_rating = float(data.get("min_rating", 0))
+        max_price = float(data.get("max_price", float("inf")))
+        k = int(data.get("k", 20)) * 3  
+
         if not query:
-            return jsonify({"error": "No query provided"}), 400
+            return jsonify({"error": "Query cannot be empty"}), 400
 
-        query_embedding = get_query_embedding(query, word2vecModel)
+        # Encode Query
+        query_embedding = encoder.encode([query])[0]
+        distances, indices = index.search(np.array([query_embedding], dtype="float32"), k)
 
-        # ✅ Perform Similarity Search in Pinecone
-        search_results = index.query(
-            namespace="product-namespace",
-            vector=query_embedding.tolist(),
-            top_k=7,
-            include_metadata=True
-        )
+        results = []
+        for i, idx in enumerate(indices[0]):
+            product = products[idx]
 
-        # ✅ Process and return top 5 Similar Products
-        response = []
-        for match in search_results["matches"]:
-            product_info = {
-                "ProductID": match["id"],
-                "SimilarityScore": match["score"],
-                "ProductName": match["metadata"]["Name"],
-                "Price": match["metadata"]["UnitPrice"],
-                "Rating": match["metadata"]["AvgRating"],
-                "ImageURL": match["metadata"].get("ImageURL", "No Image Available"),
-                "Description": match["metadata"].get("Description", "No Description Available")
-            }
-            response.append(product_info)
+           
+            if product["rating"] >= min_rating and product["final_price"] <= max_price:
+                results.append({
+                    "title": product["title"],
+                    "description": product["description"],
+                    "price": product["final_price"],
+                    "rating": product["rating"],
+                    "image_url": product["image_url"],
+                    "similarity_score": float(distances[0][i]),
+                    "product_id": product["asin"]
+                })
 
-        return jsonify({"response": response})
+                if len(results) >= k // 3:  
+                    break
+
+       
+        generated_response = generate_response(results)
+
+       
+        return jsonify({
+            "products": sorted(results, key=lambda x: x["similarity_score"], reverse=True),
+            "generated_response": generated_response
+        })
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return jsonify({"error": f"Error: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
+# Run Flask App
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=8000, debug=True)

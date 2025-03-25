@@ -108,8 +108,8 @@ export async function POST(req: Request): Promise<Response> {
     const body: ActionPostRequest = await req.json();
     const buyerKey = body.account;
 
-    const amount = Number(url.searchParams.get("amount") || "0");
-
+    const amount = Number(url.searchParams.get("amount"));
+    console.log(amount)
     if (amount <= 0) {
       throw new Error("Amount must be greater than 0");
     }

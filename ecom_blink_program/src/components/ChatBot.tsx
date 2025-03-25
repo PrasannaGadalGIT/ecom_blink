@@ -1,19 +1,14 @@
 "use client";
 import React, { useState, useEffect, useRef, JSX } from "react";
-import { Sun, Moon, Send, Bot, User } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
-import { Button } from "./ui/button";
+import {  Send, Bot, User } from "lucide-react";
+import {  useSession } from "next-auth/react";
 import axios from "axios";
 import { FaOpencart } from "react-icons/fa";
 import { useAppDispatch, useAppSelector } from "@/lib/hooks";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+
 import { useRouter } from "next/navigation";
 
-import { addToCartAsync,decreaseQuantity, increaseQuantity } from "@/lib/features/cart/cartSlice";
+import { addToCartAsync } from "@/lib/features/cart/cartSlice";
 import Navbar from "./NavBar";
 interface Message {
   text: string | JSX.Element; // Allow JSX elements
@@ -21,10 +16,16 @@ interface Message {
 }
 
 interface Response {
-  Price: number;
-  ProductName: string;
-  Description: string;
-  ImageURL: string;
+  generated_response: string;
+  products: Products[]
+}
+
+interface Products{
+  description: string;
+  image_url: string;
+  price: number;
+  title: string;
+  rating: number
 }
 
 interface ChatResponse {
@@ -38,11 +39,10 @@ const ChatBot = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [typing, setTyping] = useState<boolean>(false);
   const [input, setInput] = useState("");
-  const [currentChatId, setCurrentChatId] = useState<number | null>(null);
+
   const [userId, setUserId] = useState<number | null>(null);
   const { data: session } = useSession();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [loadingChats, setLoadingChats] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       text: "Hello! I'm your AI assistant. How can I help you today?",
@@ -93,7 +93,7 @@ const ChatBot = () => {
             text: chat.query,
             isBot: false,
           });
-  
+        
          
           if (chat.responses && Array.isArray(chat.responses)) {
             const botMessage: Message = {
@@ -150,7 +150,7 @@ const ChatBot = () => {
     }
   };
   
-  // Fetch chats when userId is available
+ 
   useEffect(() => {
     if (userId) {
       getChats(userId);
@@ -212,59 +212,70 @@ const ChatBot = () => {
     setLoading(false);
   };
 
+
+  const [generated_responses, setGeneratedResponse] = useState("")
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !userId) return;
-
+  
     const userMessage: Message = {
       text: input,
       isBot: false,
     };
-
+  
     setMessages((prev) => [...prev, userMessage]);
     setTyping(true);
-
+  
     const userQuery = input;
     setInput("");
-
+  
     try {
-      // First create a chat entry in the database
+      
+     
+  
+     
       const chatId = await createChat(userQuery);
-      setCurrentChatId(chatId);
-
-      // Then send to your AI backend
-      const response = await axios.post<{ response: Response[] }>("http://127.0.0.1:5000/generate", {
+   
+  
+   
+      const response = await axios.post<Response>("http://127.0.0.1:8000/search", {
         query: userQuery,
       });
-
-      console.log("Response:", response.data.response);
-
-      if (response.data && Array.isArray(response.data.response)) {
-        const productSuggestions = response.data.response.map((item, index) => (
+      
+   
+      console.log(response)
+    
+      if (response.data ) {
+        
+        const productSuggestions = response.data.products.map((item, index) => (
           <div key={index}>
             <br />
+            
             <strong>
-              {index + 1}. {item.ProductName}
+              {index + 1}. {item.title}
             </strong>
             <br />
             <br />
             <img
-              src={item.ImageURL}
-              alt={item.ProductName}
-              width={400}
+              src={item.image_url}
+              alt={item.title}
+              width={300}
               className="mb-4 rounded-lg"
             />
             <p>
-              <strong>Description: </strong>{item.Description} <br/><br/> under price <strong>$ {item.Price}</strong>
+              <strong>Description: </strong>{item.description} <br/><br/> under price <strong>$ {item.price}</strong>
+            </p>
+            <p>
+              <strong>Rating: </strong>{item.rating}
             </p>
             <br />
             <button
               onClick={() =>
                 handleAddToCart({
-                  productName: item.ProductName,
-                  imageUrl: item.ImageURL,
-                  description: item.Description,
-                  price: item.Price,
+                  productName: item.title,
+                  imageUrl: item.image_url,
+                  description: item.description,
+                  price: item.price,
                   userId: userId,
                 })
               }
@@ -285,25 +296,27 @@ const ChatBot = () => {
             <br />
           </div>
         ));
-
+     
+        console.log(response.data.generated_response)
         const botMessage: Message = {
-          text: <div>{productSuggestions}</div>, // Render JSX directly
+          text: <div>{response.data.generated_response}<br/>{productSuggestions}</div>,
           isBot: true,
         };
-
+  
         setMessages((prev) => [...prev, botMessage]);
-
+  
         // Save the responses to the database
         if (chatId) {
-          const chatResponses = response.data.response.map((item) => ({
-            description: item.Description,
-            imageURL: item.ImageURL,
-            price: item.Price,
-            productName: item.ProductName,
+          const chatResponses = response.data.products.map((item) => ({
+            description: item.description,
+            imageURL: item.image_url,
+            price: item.price,
+            productName: item.title,
+            rating: item.rating
           }));
-
+  
           console.log("Chat Responses:", chatResponses);
-
+  
           try {
             await axios.post("/api/prisma/responses", {
               chatId, // Include chatId here
@@ -325,14 +338,17 @@ const ChatBot = () => {
     }
   };
   
+  
 
   return (
     <div className={`min-h-screen transition-colors duration-200 ${darkMode ? "dark:bg-black" : "bg-gray-50"}`}>
-    {/* Use the Navbar component */}
+  
     <Navbar darkMode={darkMode} setDarkMode={setDarkMode} userId={userId} />
 
     <div className="max-w-4xl mx-auto p-4">
       <div className="bg-white dark:bg-black rounded-lg shadow-lg h-[600px] flex flex-col">
+
+
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message, index) => (
             <div key={index} className={`flex items-start gap-2 ${message.isBot ? "" : "flex-row-reverse"}`}>
