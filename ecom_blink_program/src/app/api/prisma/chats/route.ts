@@ -4,9 +4,9 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 interface Resposne {
   description: string;
-  imageURL : string;
+  image_url : string;
   price: number;
-  productName: string
+  title: string
 }
 // GET - Fetch chats (with optional filtering by userId)
 export async function GET(request: Request) {
@@ -81,13 +81,12 @@ export async function POST(request: Request) {
       data: {
         query: body.query,
         userId: body.userId,
-        // If responses are provided, create them as well
         responses: body.responses ? {
           create: body.responses.map((resp: Resposne) => ({
             description: resp.description,
-            imageURL: resp.imageURL,
+            image_url: resp.image_url,
             price: resp.price,
-            productName: resp.productName,
+            title: resp.title,
           }))
         } : undefined
       },

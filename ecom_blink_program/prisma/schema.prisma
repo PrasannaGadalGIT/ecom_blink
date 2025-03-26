@@ -30,9 +30,9 @@ model Chat {
 model Response {
   id          Int     @id @default(autoincrement())
   description String
-  imageURL    String?
+  image_url    String?
   price       Float?
-  productName String?
+  title String?
   chatId      Int
   chat        Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
@@ -44,7 +44,7 @@ model Cart {
   userId      Int
   user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   productName String
-  imageURL    String?
+  image_url    String?
   description String?
   price       Float
   quantity    Int     @default(1)

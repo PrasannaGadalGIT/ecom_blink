@@ -33,7 +33,7 @@ export const makeStore = () => {
   });
 };
 
-// Initialize persistor to enable state persistence
+
 export const persistor = persistStore(makeStore());
 
 // Type definitions

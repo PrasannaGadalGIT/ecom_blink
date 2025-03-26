@@ -5,9 +5,9 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 interface Resposne {
   description: string;
-  imageURL : string;
+  image_url : string;
   price: number;
-  productName: string
+  title: string
 }
 export async function POST(request: NextRequest) {
   try {
@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
         prisma.response.create({
           data: {
             description: item.description || "",
-            imageURL: item.imageURL || "",
+            image_url: item.image_url || "",
             price: (item.price || 0),
-            productName: item.productName || "",
+            title: item.title || "",
             chatId: parseInt(chatId),
           },
         })

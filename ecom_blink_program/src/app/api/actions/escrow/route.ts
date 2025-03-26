@@ -16,7 +16,11 @@ import {
   SystemProgram,
 
 } from "@solana/web3.js";
-
+interface TransactionDetails {
+  buyer: PublicKey;
+  seller: PublicKey;
+  amount: number;
+}
 
 // const endpoint = "https://orbital-powerful-slug.solana-devnet.quiknode.pro/5f829c00d61ba0f278b779fabd801414b22bf994/";
 // const solanaConnection = new Connection(endpoint);
@@ -34,7 +38,7 @@ import {
 const SOL_PRICE_IN_USD: number = 129.350;
 const SELLER_ADDRESS = new PublicKey("47EiJZWwj917wKwhzEYRmQSVkbfLTcsPTPsiMC9BPWjy");
 
-// Create headers for Solana devnet
+
 const headers = createActionHeaders({
   chainId: "devnet",
 });
@@ -55,14 +59,11 @@ function validatePublicKey(key: string, fieldName: string): PublicKey {
 }
 
 
-function logTransactionDetails(details: Record<string, object>) {
+function logTransactionDetails(details: Record<string, any>) {
   console.log("Transaction Details:", JSON.stringify(details, null, 2));
 }
 
 
-
-
-// GET endpoint (unchanged)
 export async function GET(req: Request): Promise<Response> {
   const url = new URL(req.url);
   
@@ -116,10 +117,9 @@ export async function POST(req: Request): Promise<Response> {
     const buyer = validatePublicKey(buyerKey, "buyer public key");
     const seller = SELLER_ADDRESS;
 
-    // Initialize a connection to the Solana devnet
     const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
-    // Create a transaction to transfer funds from the buyer to the seller
+   
     const transaction = new Transaction().add(
       SystemProgram.transfer({
         fromPubkey: buyer,

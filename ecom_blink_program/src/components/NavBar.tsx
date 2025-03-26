@@ -46,7 +46,7 @@ const Navbar: React.FC<NavbarProps> = ({ darkMode, setDarkMode, userId }) => {
             ) : (
               cartItems.map((item, index) => (
                 <div key={index} className="flex justify-between items-center border-b py-2">
-                  <Image src={item.imageUrl} alt={item.productName} className="w-20 h-12 object-cover" />
+                  <img src={item?.imageUrl} alt={item.productName} className="w-20 h-12 object-cover" />
                   <div className="flex-1 px-2">
                     <p className="text-sm font-medium">{item.productName}</p>
                     <p className="text-xs text-gray-500">${item.price} x {item.quantity}</p>

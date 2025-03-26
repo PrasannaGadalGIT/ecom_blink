@@ -76,8 +76,8 @@ def search_products():
         query = data.get("query", "").strip()
         min_rating = float(data.get("min_rating", 0))
         max_price = float(data.get("max_price", float("inf")))
-        k = int(data.get("k", 20)) * 3  
-
+        k = int(data.get("k", 10)) * 3  
+    
         if not query:
             return jsonify({"error": "Query cannot be empty"}), 400
 
@@ -105,12 +105,12 @@ def search_products():
                     break
 
        
-        generated_response = generate_response(results)
+      
 
        
         return jsonify({
             "products": sorted(results, key=lambda x: x["similarity_score"], reverse=True),
-            "generated_response": generated_response
+            
         })
 
     except Exception as e:

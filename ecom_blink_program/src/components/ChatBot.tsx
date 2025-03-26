@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, JSX } from "react";
+import React, { useState, useEffect, useRef, JSX, useCallback } from "react";
 import {  Send, Bot, User } from "lucide-react";
 import {  useSession } from "next-auth/react";
 import axios from "axios";
@@ -10,7 +10,7 @@ import { useAppDispatch } from "@/lib/hooks";
 
 import { addToCartAsync } from "@/lib/features/cart/cartSlice";
 import Navbar from "./NavBar";
-import Image from "next/image";
+import { title } from "process";
 interface Message {
   text: string | JSX.Element; // Allow JSX elements
   isBot: boolean;
@@ -31,9 +31,9 @@ interface Products{
 
 interface ChatResponse {
   description: string;
-  imageURL: string;
+  image_url: string;
   price: number;
-  productName: string;
+  title: string;
 }
 
 const ChatBot = () => {
@@ -53,8 +53,10 @@ const ChatBot = () => {
   // const cartItems = useAppSelector((state) => state.cart.items);
   // const router = useRouter();
   
-
-
+  const getPurchaseLink = (product: Products) => {
+    const productUrl = `http://localhost:3000/api/actions/escrow?title=${encodeURIComponent(product.title)}&imageUrl=${encodeURIComponent(product.image_url)}&description=${encodeURIComponent(product.description || "")}&price=${product.price}`;
+    return `https://dial.to/developer?url=${encodeURIComponent(productUrl)}&cluster=devnet`;
+  };
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
@@ -81,21 +83,21 @@ const ChatBot = () => {
   }, [messages]);
 
 
-  const getChats = async (userId: number) => {
+  const getChats = useCallback(async (userId: number) => {
     try {
       const response = await axios.get(`/api/prisma/chats?userId=${userId}`);
-      
+      console.log(response)
       if (response.data && Array.isArray(response.data)) {
         const chatHistory: Message[] = [];
   
         response.data.forEach((chat) => {
-          
           chatHistory.push({
             text: chat.query,
             isBot: false,
           });
+
+          console.log(response)
         
-         
           if (chat.responses && Array.isArray(chat.responses)) {
             const botMessage: Message = {
               text: (
@@ -105,7 +107,15 @@ const ChatBot = () => {
                       <br />
                       <strong>{index + 1}. {item.title}</strong>
                       <br /><br />
-                      <Image src={item.image_url} alt={item.title} width={400} className="mb-4 rounded-lg" />
+                     
+                      <div className="relative w-[400px] h-[300px] mb-4">
+                        <img 
+                          src={item?.image_url} 
+                          alt={item.title} 
+                       
+                          className="rounded-lg object-contain"
+                        />
+                      </div>
                       <p>
                         <strong>Description: </strong>{item.description} <br /><br /> under price <strong>$ {item.price}</strong>
                       </p>
@@ -113,25 +123,16 @@ const ChatBot = () => {
                       <button
                         onClick={() =>
                           handleAddToCart({
-                            productName: item.title,
-                            imageUrl: item.image_url,
+                            title: item.title,
+                            image_url: item.image_url,
                             description: item.description,
                             price: item.price,
                             userId: userId,
                           })
                         }
-                        style={{
-                          display: "flex",
-                          backgroundColor: "black",
-                          color: "white",
-                          padding: "8px 12px",
-                          borderRadius: "6px",
-                          textDecoration: "none",
-                          maxWidth: "100%",
-                          wordBreak: "break-word",
-                        }}
+                        className="flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words"
                       >
-                        Add to cart <FaOpencart size={25} className=" ml-2" />
+                        Add to cart <FaOpencart size={25} className="ml-2" />
                       </button>
                       <br /><br />
                     </div>
@@ -149,7 +150,7 @@ const ChatBot = () => {
     } catch (error) {
       console.error("Error fetching chats:", error);
     }
-  };
+  }, []);
   
  
   useEffect(() => {
@@ -162,7 +163,7 @@ const ChatBot = () => {
 
 
   // Create a new chat in the database
-  const createChat = async (query: string, responses: ChatResponse[] = []) => {
+  const createChat = async (query: string, responses: Products[]) => {
     try {
       if (!userId) return null;
 
@@ -171,6 +172,8 @@ const ChatBot = () => {
         userId: userId,
         responses: responses,
       });
+
+      console.log(responses)
 
       return response.data.chat.id;
     } catch (error) {
@@ -181,26 +184,26 @@ const ChatBot = () => {
   const dispatch = useAppDispatch();
   // const [loading, setLoading] = useState(false);
   const handleAddToCart =async (cartDetail: {
-    productName: string;
-    imageUrl: string;
+    title: string;
+    image_url: string;
     description: string;
     price: number;
     userId: number
   }) => {
     dispatch(addToCartAsync({
-      productName: cartDetail.productName,
+      productName: cartDetail.title,
       price: cartDetail.price,
       description: cartDetail.description,
-      imageUrl: cartDetail.imageUrl,
+      imageUrl: cartDetail.image_url,
       userId: cartDetail.userId,
       quantity: 1
     }));
- 
+  
     try {
       await axios.post("/api/prisma/cart/add", {
         userId,
-        productName: cartDetail.productName,
-        imageURL: cartDetail.imageUrl,
+        title: cartDetail.title,
+        imageURL: cartDetail.image_url,
         description: cartDetail.description,
         price: cartDetail.price,
         quantity: 1,
@@ -214,7 +217,6 @@ const ChatBot = () => {
   };
 
 
- 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !userId) return;
@@ -231,34 +233,21 @@ const ChatBot = () => {
     setInput("");
   
     try {
-      
-     
-  
-     
-      const chatId = await createChat(userQuery);
-   
-  
-   
       const response = await axios.post<Response>("http://127.0.0.1:8000/search", {
         query: userQuery,
       });
-      
-   
-      console.log(response)
     
-      if (response.data ) {
-        
+      const chatId = await createChat(userQuery, response.data.products);
+    
+      if (response.data) {
         const productSuggestions = response.data.products.map((item, index) => (
           <div key={index}>
             <br />
-            
-            <strong>
-              {index + 1}. {item.title}
-            </strong>
+            <strong>{index + 1}. {item.title}</strong>
             <br />
             <br />
-            <Image
-              src={item.image_url}
+            <img
+              src={item?.image_url}
               alt={item.title}
               width={300}
               className="mb-4 rounded-lg"
@@ -270,57 +259,54 @@ const ChatBot = () => {
               <strong>Rating: </strong>{item.rating}
             </p>
             <br />
-            <button
-              onClick={() =>
-                handleAddToCart({
-                  productName: item.title,
-                  imageUrl: item.image_url,
-                  description: item.description,
-                  price: item.price,
-                  userId: userId,
-                })
-              }
-              style={{
-                display: "flex",
-                backgroundColor: "black",
-                color: "white",
-                padding: "8px 12px",
-                borderRadius: "6px",
-                textDecoration: "none",
-                maxWidth: "100%",
-                wordBreak: "break-word",
-              }}
-            >
-              Add to cart <FaOpencart size={25} className=" ml-2" />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() =>
+                  handleAddToCart({
+                    title: item.title,
+                    image_url: item.image_url,
+                    description: item.description,
+                    price: item.price,
+                    userId: userId,
+                  })
+                }
+                className="flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words"
+              >
+                Add to cart <FaOpencart size={25} className="ml-2" />
+              </button>
+              <a
+                href={getPurchaseLink(item)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex bg-blue-600 text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center"
+              >
+                Buy Now
+              </a>
+            </div>
             <br />
             <br />
           </div>
         ));
      
-        console.log(response.data.generated_response)
         const botMessage: Message = {
-          text: <div>{response.data.generated_response}<br/>{productSuggestions}</div>,
+          text: <div>{productSuggestions}</div>,
           isBot: true,
         };
   
         setMessages((prev) => [...prev, botMessage]);
   
-        // Save the responses to the database
         if (chatId) {
           const chatResponses = response.data.products.map((item) => ({
             description: item.description,
             imageURL: item.image_url,
             price: item.price,
-            productName: item.title,
+            title: item.title,
             rating: item.rating
           }));
   
-          console.log("Chat Responses:", chatResponses);
-  
           try {
             await axios.post("/api/prisma/responses", {
-              chatId, // Include chatId here
+              chatId,
               responses: chatResponses,
             });
           } catch (responseError) {
@@ -338,7 +324,8 @@ const ChatBot = () => {
       setTyping(false);
     }
   };
-  
+
+
   
 
   return (

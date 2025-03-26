@@ -79,7 +79,7 @@ const DisplayCartItems: React.FC<CartProps> = ({
         {cartProducts.map((item) => (
           <div key={item.id} className={`flex items-center justify-between ${darkMode ? "bg-gray-800" : "bg-white"} shadow-md rounded-lg p-4`}>
             <div className="flex items-center space-x-4">
-              <Image
+              <img
                 src={item.imageURL}
                 alt={item.productName}
                 className="w-36 h-24 object-cover rounded-lg"

@@ -140,8 +140,8 @@ const BotUI = () => {
               </strong>
               <br />
               <br />
-              <Image
-                src={item.ImageURL}
+              <img
+                src={item?.ImageURL}
                 alt={item.ProductName}
                 width={400}
                 className="mb-4"
