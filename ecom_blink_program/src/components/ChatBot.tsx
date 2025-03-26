@@ -10,7 +10,7 @@ import { useAppDispatch } from "@/lib/hooks";
 
 import { addToCartAsync } from "@/lib/features/cart/cartSlice";
 import Navbar from "./NavBar";
-import { title } from "process";
+
 interface Message {
   text: string | JSX.Element; // Allow JSX elements
   isBot: boolean;
@@ -29,12 +29,7 @@ interface Products{
   rating: number
 }
 
-interface ChatResponse {
-  description: string;
-  image_url: string;
-  price: number;
-  title: string;
-}
+
 
 const ChatBot = () => {
   const [darkMode, setDarkMode] = useState(false);

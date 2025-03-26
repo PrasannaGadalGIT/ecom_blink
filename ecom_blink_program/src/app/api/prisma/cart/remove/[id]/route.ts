@@ -1,24 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export async function DELETE(
-  request: Request,
-  context: { params: { id: string } } // Corrected the type
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
-    const id = context.params.id; // Extract id properly
+    const { id } = context.params;
     const parsedId = parseInt(id, 10);
 
-    // Validate id
     if (isNaN(parsedId)) {
       return NextResponse.json({ message: "Invalid item ID" }, { status: 400 });
     }
 
-    // Delete the item from the cart
     await prisma.cart.delete({
-      where: { id: parsedId }, // Ensure `id` is a number if your DB uses integers
+      where: { id: parsedId },
     });
 
     return NextResponse.json(

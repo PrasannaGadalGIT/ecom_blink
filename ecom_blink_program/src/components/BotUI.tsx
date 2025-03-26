@@ -6,7 +6,7 @@ import {  useSession } from "next-auth/react";
 import axios from "axios";
 import { FaOpencart } from "react-icons/fa";
 
-import Image from "next/image";
+
 
 interface Message {
   text: string | JSX.Element; // Allow JSX elements

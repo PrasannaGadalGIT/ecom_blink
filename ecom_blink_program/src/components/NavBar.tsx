@@ -9,7 +9,7 @@ import { useAppDispatch, useAppSelector } from "@/lib/hooks";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRouter } from "next/navigation";
 import { decreaseQuantity, increaseQuantity } from "@/lib/features/cart/cartSlice";
-import Image from "next/image";
+
 
 interface NavbarProps {
   darkMode: boolean;

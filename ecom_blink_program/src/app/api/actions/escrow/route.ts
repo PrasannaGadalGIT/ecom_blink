@@ -16,11 +16,11 @@ import {
   SystemProgram,
 
 } from "@solana/web3.js";
-interface TransactionDetails {
-  buyer: PublicKey;
-  seller: PublicKey;
-  amount: number;
-}
+// interface TransactionDetails {
+//   buyer: PublicKey;
+//   seller: PublicKey;
+//   amount: number;
+// }
 
 // const endpoint = "https://orbital-powerful-slug.solana-devnet.quiknode.pro/5f829c00d61ba0f278b779fabd801414b22bf994/";
 // const solanaConnection = new Connection(endpoint);
@@ -59,9 +59,7 @@ function validatePublicKey(key: string, fieldName: string): PublicKey {
 }
 
 
-function logTransactionDetails(details: Record<string, any>) {
-  console.log("Transaction Details:", JSON.stringify(details, null, 2));
-}
+
 
 
 export async function GET(req: Request): Promise<Response> {
@@ -137,13 +135,7 @@ export async function POST(req: Request): Promise<Response> {
       requireAllSignatures: false,
     }).toString("base64");
 
-    // Log transaction details
-    logTransactionDetails({
-      buyer: buyer.toString(),
-      seller: seller.toString(),
-      amount: amountLamports,
-    });
-
+    
     return Response.json(
       {
         transaction: serializedTransaction,

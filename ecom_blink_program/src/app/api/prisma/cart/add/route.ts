@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { ZodError, z } from "zod";
+import { ZodError } from "zod";
 
 const prisma = new PrismaClient();
 

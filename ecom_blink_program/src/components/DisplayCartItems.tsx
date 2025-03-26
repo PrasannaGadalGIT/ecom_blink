@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import NavBar from "./NavBar"; // Import the NavBar component
-import Image from "next/image";
+
 
 interface CartItem {
   id: number;
