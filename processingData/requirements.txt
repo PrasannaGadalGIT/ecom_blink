@@ -7,5 +7,6 @@ gensim
 nltk
 python_dotenv
 scikit-learn
-flask
 sentence_transformers
+pymongo
+
