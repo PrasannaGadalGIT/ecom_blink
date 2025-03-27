@@ -7,6 +7,7 @@ interface Resposne {
   image_url : string;
   price: number;
   title: string
+  url: string;
 }
 // GET - Fetch chats (with optional filtering by userId)
 export async function GET(request: Request) {
@@ -87,6 +88,8 @@ export async function POST(request: Request) {
             image_url: resp.image_url,
             price: resp.price,
             title: resp.title,
+            url:resp.url
+            
           }))
         } : undefined
       },

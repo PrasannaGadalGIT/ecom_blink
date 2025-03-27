@@ -9,4 +9,4 @@ python_dotenv
 scikit-learn
 sentence_transformers
 pymongo
-
+faiss

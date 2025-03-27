@@ -6,12 +6,12 @@ import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
 from flask_cors import CORS
-from transformers import GPT2LMHeadModel, GPT2Tokenizer
+import spacy
 
-# Load environment variables
+nlp = spacy.load("en_core_web_sm")
+
 load_dotenv()
 
-# Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 
@@ -21,54 +21,30 @@ db = client["ecommerce"]
 
 encoder = SentenceTransformer("all-MiniLM-L6-v2")
 
-
-gpt_model = GPT2LMHeadModel.from_pretrained("gpt2")
-gpt_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
-
-
 def initialize_system():
     products = list(db.products.find({}, {
         "title": 1, "description": 1, "categories": 1,
         "rating": 1, "final_price": 1, "image_url": 1,
-        "asin": 1, "embedding": 1
+        "asin": 1, "embedding": 1, "url": 1
     }))
 
-    
     for product in products:
         product["rating"] = float(product["rating"])
         product["final_price"] = float(str(product["final_price"]).strip('"'))
 
-    embeddings = np.array([p["embedding"] for p in products if "embedding" in p], dtype="float32")
+    embeddings = []
+    for p in products:
+        if "embedding" in p:
+            embeddings.append(p["embedding"])
+    embeddings = np.array(embeddings, dtype="float32")
 
-    if embeddings.shape[0] == 0:
-        raise ValueError("No valid embeddings found in MongoDB")
-
-    index = faiss.IndexFlatIP(embeddings.shape[1])
+    index = faiss.IndexFlatIP(embeddings.shape[1])  # Inner Product for cosine similarity
     index.add(embeddings)
 
     return index, products
 
 index, products = initialize_system()
 
-
-def generate_response(products):
-    product_names = [product["title"] for product in products]
-
-    
-
-    # Interactive chat prompt
-    chat_prompt = (
-        "Great choices! 😊 Are you looking for something specific today? "
-        "Do you have any preferences, like brand or budget? I'm happy to help!"
-    )
-
-    inputs = gpt_tokenizer.encode(chat_prompt, return_tensors="pt")
-    outputs = gpt_model.generate(inputs, max_length=200, num_return_sequences=1)
-    response = gpt_tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-    return f"\n\n{response}"
-
-# API Route for Product Search
 @app.route("/search", methods=["POST"])
 def search_products():
     try:
@@ -76,12 +52,27 @@ def search_products():
         query = data.get("query", "").strip()
         min_rating = float(data.get("min_rating", 0))
         max_price = float(data.get("max_price", float("inf")))
-        k = int(data.get("k", 10)) * 3  
-    
+        k = int(data.get("k", 20)) * 3  
+
         if not query:
             return jsonify({"error": "Query cannot be empty"}), 400
 
-        # Encode Query
+        # Extract keywords for boosting
+        doc = nlp(query)
+        nouns = []
+        adjectives = []
+
+        for token in doc:
+            if token.pos_ == "NOUN":
+                nouns.append(token.text.lower())
+            elif token.pos_ == "ADJ":
+                adjectives.append(token.text.lower())
+        keywords = {
+            "nouns": nouns,
+            "adjectives": adjectives
+        }
+
+      
         query_embedding = encoder.encode([query])[0]
         distances, indices = index.search(np.array([query_embedding], dtype="float32"), k)
 
@@ -89,33 +80,34 @@ def search_products():
         for i, idx in enumerate(indices[0]):
             product = products[idx]
 
-           
             if product["rating"] >= min_rating and product["final_price"] <= max_price:
+               
+                title_desc = f"{product['title']} {product['description']}".lower()
+                adjective_matches = sum(
+                    1 for adj in keywords["adjectives"] if adj in title_desc
+                )
+                boosted_score = float(distances[0][i]) * (1 + 0.1 * adjective_matches)
+
                 results.append({
                     "title": product["title"],
                     "description": product["description"],
                     "price": product["final_price"],
                     "rating": product["rating"],
                     "image_url": product["image_url"],
-                    "similarity_score": float(distances[0][i]),
-                    "product_id": product["asin"]
+                    "similarity_score": boosted_score,
+                    "product_id": product["asin"],
+                    "url": product.get("url", "")
                 })
 
                 if len(results) >= k // 3:  
                     break
 
-       
-      
-
-       
         return jsonify({
             "products": sorted(results, key=lambda x: x["similarity_score"], reverse=True),
-            
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Run Flask App
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)

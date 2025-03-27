@@ -2,15 +2,19 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import NavBar from "./NavBar"; // Import the NavBar component
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 
 interface CartItem {
   id: number;
   productName: string;
-  description?: string;
+  description: string;
   price: number;
   quantity: number;
-  imageURL: string;
+  image_url: string;
+ 
+
+  
 }
 
 interface CartProps {
@@ -33,7 +37,7 @@ const DisplayCartItems: React.FC<CartProps> = ({
 
 }) => {
   const [darkMode, setDarkMode] = useState(false);
-
+  console.log(cartProducts)
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
   };
@@ -67,7 +71,14 @@ const DisplayCartItems: React.FC<CartProps> = ({
     const purchaseLink = `https://dial.to/developer?url=${encodeURIComponent(checkoutUrl)}&cluster=devnet`;
     window.open(purchaseLink, "_blank");
   };
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Record<number, boolean>>({});
 
+  const toggleDescription = (index: number) => {
+    setExpandedDescriptions(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
   return (
     <div className={`${darkMode ? "bg-gray-900 text-white" : "bg-white text-gray-800"}`}>
       <NavBar darkMode={darkMode} setDarkMode={toggleDarkMode} userId={null} />
@@ -80,13 +91,35 @@ const DisplayCartItems: React.FC<CartProps> = ({
           <div key={item.id} className={`flex items-center justify-between ${darkMode ? "bg-gray-800" : "bg-white"} shadow-md rounded-lg p-4`}>
             <div className="flex items-center space-x-4">
               <img
-                src={item.imageURL}
+                src={item.image_url}
                 alt={item.productName}
                 className="w-36 h-24 object-cover rounded-lg"
               />
               <div className="flex flex-col">
                 <p className="text-lg font-medium">{item.productName}</p>
-                {item.description && <p className="text-sm text-gray-500">{item.description}</p>}
+                {item.description && (
+  <div className="mb-2">
+    <div className={`text-sm text-gray-500 overflow-hidden transition-all duration-300 ${!expandedDescriptions[item.id] ? 'max-h-16' : 'max-h-[500px]'}`}>
+      <p>{item.description}</p>
+    </div>
+    <button
+      onClick={() => toggleDescription(item.id)}
+      className="text-xs text-blue-500 hover:text-blue-700 mt-1 flex items-center"
+    >
+      {expandedDescriptions[item.id] ? (
+        <>
+          <ChevronUp size={14} className="mr-1" />
+          Show less
+        </>
+      ) : (
+        <>
+          <ChevronDown size={14} className="mr-1" />
+          Show more
+        </>
+      )}
+    </button>
+  </div>
+)}
                 <p className="text-md font-semibold">Price: ${item.price}</p>
               </div>
             </div>
@@ -99,12 +132,7 @@ const DisplayCartItems: React.FC<CartProps> = ({
               >
                 Remove
               </button>
-              <button
-                className={`px-3 py-1 ${darkMode ? "bg-green-600" : "bg-green-200"} rounded-full text-sm ${darkMode ? "text-white" : "text-green-600"} hover:${darkMode ? "bg-green-700" : "bg-green-300"}`}
-                onClick={() => handleBuyNow(item.productName, item.imageURL,item.quantity, item.price,item.description)}
-              >
-                Buy Now
-              </button>
+             
             </div>
           </div>
         ))}

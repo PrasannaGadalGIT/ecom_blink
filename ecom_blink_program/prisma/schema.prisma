@@ -32,6 +32,7 @@ model Response {
   description String
   image_url    String?
   price       Float?
+  url         String?
   title String?
   chatId      Int
   chat        Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)

@@ -57,7 +57,7 @@ function LoginComp() {
             </p>
           )} */}
           <Header />
-          {mode === "signup" && <SignUp />}
+         
         </div>
 
         {/* Right Section */}
@@ -66,18 +66,9 @@ function LoginComp() {
             {mode === "signup" ? "Sign Up Account" : "Log In Account"}
           </h3>
           <AuthButtons />
-          <Border />
-          <SignUpForm mode={mode} />
-          <p className="mt-4 text-center text-zinc-700">
-            {mode === "signup" ? "Already have an account?" : "Don't have an account?"}{" "}
-            <a
-              href="#"
-              className="text-white hover:underline"
-              onClick={() => setMode(mode === "signup" ? "login" : "signup")}
-            >
-              {mode === "signup" ? "Log in" : "Sign up"}
-            </a>
-          </p>
+       
+         
+         
         </div>
       </div>
     </div>
