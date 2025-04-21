@@ -8,16 +8,17 @@ from sentence_transformers import SentenceTransformer
 from flask_cors import CORS
 import spacy
 import re
-nlp = spacy.load("en_core_web_sm")
+import json
 
+nlp = spacy.load("en_core_web_sm")
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
-# MongoDB Connection
 client = MongoClient(os.getenv("MONGO_DB_URI"))
 db = client["ecommerce"]
+collections = ["products", "products2"]
 
 encoder = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -25,46 +26,90 @@ def extract_filters(query):
     price_filter = None
     rating_filter = None
 
-   
     price_match = re.search(r"under\s?\$?(\d+\.?\d*)", query.lower())
     if price_match:
-        price_filter = float(price_match.group(1))  
+        price_filter = float(price_match.group(1))
 
-  
     rating_match = re.search(r"rating\s?under\s?(\d+\.?\d*)", query.lower())
     if rating_match:
-        rating_filter = float(rating_match.group(1))  
+        rating_filter = float(rating_match.group(1))
 
-    
     if rating_filter is None:
-        rating_filter = 0  
+        rating_filter = 0
     if price_filter is None:
-        price_filter = float("inf")  
+        price_filter = float("inf")
 
     return rating_filter, price_filter
 
+def clean_image_url(image_url):
+    if isinstance(image_url, str) and image_url.startswith('['):
+        try:
+            parsed = json.loads(image_url)
+            if isinstance(parsed, list) and parsed:
+                return parsed[0]  # return the first valid URL
+        except json.JSONDecodeError:
+            pass
+    return image_url  # fallback to original
 
 def initialize_system():
-    products = list(db.products.find({}, {
-        "title": 1, "description": 1, "categories": 1,
-        "rating": 1, "final_price": 1, "image_url": 1,
-        "asin": 1, "embedding": 1, "url": 1
-    }))
+    all_products = []
 
-    for product in products:
-        product["rating"] = float(product["rating"])
-        product["final_price"] = float(str(product["final_price"]).strip('"'))
+    for collection_name in collections:
+        collection_products = list(db[collection_name].find({}, {
+            "title": 1, "description": 1, "product_description": 1, "categories": 1,
+            "rating": 1, "final_price": 1, "image_url": 1, "image": 1,
+            "asin": 1, "sku": 1, "embedding": 1, "url": 1
+        }))
 
+        for product in collection_products:
+            product["source_collection"] = collection_name
+
+            if "rating" in product:
+                try:
+                    product["rating"] = float(product["rating"])
+                except (ValueError, TypeError):
+                    product["rating"] = 0.0
+            else:
+                product["rating"] = 0.0
+
+            if "final_price" in product:
+                try:
+                    product["final_price"] = float(str(product["final_price"]).strip('"'))
+                except (ValueError, TypeError):
+                    product["final_price"] = 0.0
+            else:
+                product["final_price"] = 0.0
+
+            if "description" not in product and "product_description" in product:
+                product["description"] = product["product_description"]
+
+            if "image_url" not in product and "image" in product:
+                product["image_url"] = product["image"]
+
+            product["image_url"] = clean_image_url(product.get("image_url", ""))
+
+            if "asin" not in product and "sku" in product:
+                product["asin"] = product["sku"]
+
+        all_products.extend(collection_products)
+
+    valid_products = []
     embeddings = []
-    for p in products:
+
+    for p in all_products:
         if "embedding" in p:
             embeddings.append(p["embedding"])
-    embeddings = np.array(embeddings, dtype="float32")
+            valid_products.append(p)
 
-    index = faiss.IndexFlatIP(embeddings.shape[1])  
+    if not embeddings:
+        print("Warning: No embeddings found in the collections")
+        return None, []
+
+    embeddings = np.array(embeddings, dtype="float32")
+    index = faiss.IndexFlatIP(embeddings.shape[1])
     index.add(embeddings)
 
-    return index, products
+    return index, valid_products
 
 index, products = initialize_system()
 
@@ -73,15 +118,16 @@ def search_products():
     try:
         data = request.json
         query = data.get("query", "").strip()
-        k = int(data.get("k", 10)) * 3  
+        k = int(data.get("k", 10)) * 3
 
         if not query:
             return jsonify({"error": "Query cannot be empty"}), 400
 
-        # Extract filters (price and rating) from the query
+        if index is None:
+            return jsonify({"error": "Search index could not be initialized"}), 500
+
         min_rating, max_price = extract_filters(query)
 
-        # Extract keywords for boosting
         doc = nlp(query)
         nouns = []
         adjectives = []
@@ -91,39 +137,44 @@ def search_products():
                 nouns.append(token.text.lower())
             elif token.pos_ == "ADJ":
                 adjectives.append(token.text.lower())
+
         keywords = {
             "nouns": nouns,
             "adjectives": adjectives
         }
 
-      
         query_embedding = encoder.encode([query])[0]
         distances, indices = index.search(np.array([query_embedding], dtype="float32"), k)
 
         results = []
         for i, idx in enumerate(indices[0]):
-            product = products[idx]
+            if idx < 0 or idx >= len(products):
+                continue
 
-            # Apply the min_rating and max_price filters
+            product = products[idx]
+            title = product.get('title', '')
+            description = product.get('description', '')
+            title_desc = f"{title} {description}".lower()
+
             if product["rating"] >= min_rating and product["final_price"] <= max_price:
-                title_desc = f"{product['title']} {product['description']}".lower()
                 adjective_matches = sum(
                     1 for adj in keywords["adjectives"] if adj in title_desc
                 )
                 boosted_score = float(distances[0][i]) * (1 + 0.1 * adjective_matches)
 
                 results.append({
-                    "title": product["title"],
-                    "description": product["description"],
+                    "title": title,
+                    "description": description,
                     "price": product["final_price"],
                     "rating": product["rating"],
-                    "image_url": product["image_url"],
+                    "image_url": product.get("image_url", ""),
                     "similarity_score": boosted_score,
-                    "product_id": product["asin"],
-                    "url": product.get("url", "")
+                    "product_id": product.get("asin", ""),
+                    "url": product.get("url", ""),
+                    "source_collection": product.get("source_collection", "")
                 })
 
-                if len(results) >= k // 3:  
+                if len(results) >= k // 3:
                     break
 
         return jsonify({
@@ -131,6 +182,8 @@ def search_products():
         })
 
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":

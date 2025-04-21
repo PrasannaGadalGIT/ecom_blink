@@ -186,7 +186,7 @@ const ChatBot = () => {
                 rel="noopener noreferrer"
                 className="flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center cursor-pointer"
               >
-                Buy through amazon
+                Buy from marketplace
               </a>
             </div>
                       <br /><br />
