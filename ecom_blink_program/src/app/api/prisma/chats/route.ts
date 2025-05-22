@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     
-    // If userId is provided, filter chats by that user
+   
     if (userId) {
       const userIdNum = parseInt(userId);
       
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
           }))
         } : undefined
       },
-      // Include the created responses in the returned data
+      
       include: {
         responses: true,
       },

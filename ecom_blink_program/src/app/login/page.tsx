@@ -26,7 +26,7 @@ const Login = () => {
         <ConnectionProvider endpoint={"https://api.devnet.solana.com"}>
           <WalletProvider wallets={[]} autoConnect>
               <WalletModalProvider>
- 
+
                 <LoginComp/>
               </WalletModalProvider>
           </WalletProvider>

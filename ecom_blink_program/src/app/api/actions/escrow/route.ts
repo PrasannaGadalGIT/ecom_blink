@@ -16,23 +16,6 @@ import {
   SystemProgram,
 
 } from "@solana/web3.js";
-// interface TransactionDetails {
-//   buyer: PublicKey;
-//   seller: PublicKey;
-//   amount: number;
-// }
-
-// const endpoint = "https://orbital-powerful-slug.solana-devnet.quiknode.pro/5f829c00d61ba0f278b779fabd801414b22bf994/";
-// const solanaConnection = new Connection(endpoint);
-
-
-
-
-// const getTransaction = async (address:PublicKey, numTx: number ) => {
-//   let txList = await solanaConnection.getSignaturesForAddress(address, {limit:numTx});
-
-//   return txList;
-// }
 
 // Constants
 const SOL_PRICE_IN_USD: number = 129.350;
@@ -57,9 +40,6 @@ function validatePublicKey(key: string, fieldName: string): PublicKey {
     throw new Error(`Invalid ${fieldName}: ${key} , ${error}`);
   }
 }
-
-
-
 
 
 export async function GET(req: Request): Promise<Response> {

@@ -4,8 +4,8 @@ import React, { useEffect } from 'react'
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 const Chat = () => {
-      const {  status } = useSession();
-          const router = useRouter();
+  const { status } = useSession();
+  const router = useRouter();
       
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -20,7 +20,7 @@ const Chat = () => {
   }
 
   if (status !== "authenticated") {
-    return null; // Will redirect from useEffect
+    return null; 
   }
   return (
     <div>

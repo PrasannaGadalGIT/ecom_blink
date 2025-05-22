@@ -6,13 +6,12 @@ const prisma = new PrismaClient();
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId'); // Get the email from query params
+    const userId = searchParams.get('userId'); 
 
     if (!userId) {
       return NextResponse.json({ error: "User email is required" }, { status: 400 });
     }
 
-    // Fetch the user by email (assuming email is unique)
     const user = await prisma.user.findUnique({
       where: { id: Number(userId) },
     });
@@ -21,7 +20,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Fetch chats for the user
+  
     const chats = await prisma.chat.findMany({
       where: { userId: user.id },
       include: {

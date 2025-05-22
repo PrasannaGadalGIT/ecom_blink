@@ -1,30 +1,33 @@
 "use client";
-import React, { useState, useEffect, useRef, JSX, useCallback } from "react";
+import React, { useState, useEffect, useRef, JSX } from "react";
 import { Send, Bot, User } from "lucide-react";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import { FaOpencart } from "react-icons/fa";
-import { useAppDispatch, useAppSelector } from "@/lib/hooks";
+import { useAppDispatch } from "@/lib/hooks";
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import Navbar from "./NavBar";
+import Image from "next/image";
 
 interface Message {
   text: string | JSX.Element;
   isBot: boolean;
 }
 
-interface Chat {
-  generated_response: string;
-  products: Response[];
-}
-
-interface Response {
+interface Product {
   description: string;
   image_url: string;
   price: number;
   title: string;
   rating: number;
-  url:string;
+  url: string;
+  similarity_score?: number;
+}
+
+interface ChatResponse {
+  answer: string;
+  products: Product[];
+  model?: string;
 }
 
 const ChatBot = () => {
@@ -36,15 +39,25 @@ const ChatBot = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
-      text: "Hello! I'm your AI assistant. How can I help you today?",
+      text: (
+        <div>
+          <p>Hello! I&apos;m your AI shopping assistant.</p>
+          <p>I can:</p>
+          <ul className="list-disc pl-5">
+            <li>Help you find products</li>
+            <li>Answer general questions</li>
+            <li>Provide shopping advice</li>
+          </ul>
+          <p>How can I help you today?</p>
+        </div>
+      ),
       isBot: true,
     },
   ]);
   
   const dispatch = useAppDispatch();
 
-
-  const getPurchaseLink = (product: Response) => {
+  const getPurchaseLink = (product: Product) => {
     const productUrl = `http://localhost:3000/api/actions/escrow?title=${encodeURIComponent(product.title)}&imageUrl=${encodeURIComponent(product.image_url)}&description=${encodeURIComponent(product.description || "")}&price=${product.price}`;
     return `https://dial.to/developer?url=${encodeURIComponent(productUrl)}&cluster=devnet`;
   };
@@ -74,144 +87,46 @@ const ChatBot = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
- 
-  
-
-
-  const createChat = async (query: string, responses: Response[]) => {
+  const createChat = async (query: string, products: Product[]) => {
     try {
       if (!userId) return null;
-
-      const response = await axios.post("/api/prisma/chats", {
-        query: query,
-        userId: userId,
-        responses: responses,
+      await axios.post("/api/prisma/chats", {
+        query,
+        userId,
+        responses: products,
       });
-
-      console.log("Create Chat : ",response)
     } catch (error) {
       console.error("Error creating chat:", error);
-     
     }
   };
 
-  const handleAddToCart = async (product: Response) => {
-   
-      if (!userId) return;
-      console.log(product)
-      try {
-        await axios.post("/api/prisma/cart/add", {
-          userId,
-          title: product.title,
+  const handleAddToCart = async (product: Product) => {
+    if (!userId) return;
+    try {
+      await axios.post("/api/prisma/cart/add", {
+        userId,
+        title: product.title,
+        image_url: product.image_url,
+        description: product.description,
+        price: product.price,
+        quantity: 1,
+      });
+    
+      dispatch(
+        addToCart({
+          productName: product.title,
           image_url: product.image_url,
           description: product.description,
           price: product.price,
+          rating: product.rating,
           quantity: 1,
-        });
-    
-       
-        dispatch(
-          addToCart({
-       
-            productName: product.title,
-            image_url: product.image_url,
-            description: product.description,
-            price: product.price,
-            rating: product.rating,
-            quantity: 1,
-          })
-        );
-      } catch (error) {
-        console.error("Error adding to cart:", error);
-      }
-  
-    
+        })
+      );
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+    }
   };
 
-  const getChats = useCallback(async (userId: number) => {
-    try {
-      const response = await axios.get(`/api/prisma/chats?userId=${userId}`);
-      if (response.data && Array.isArray(response.data)) {
-        const chatHistory: Message[] = [];
-  
-        response.data.forEach((chat) => {
-          chatHistory.push({
-            text: chat.query,
-            isBot: false,
-          });
-        
-          console.log(response)
-          if (chat.responses && Array.isArray(chat.responses)) {
-            const botMessage: Message = {
-              text: (
-                <div>
-                  {chat.responses.map((item: Response, index: number) => (
-                    <div key={index}>
-                      <br />
-                      <strong>{index + 1}. {item.title}</strong>
-                      <br /><br />
-                     
-                      <div className="relative w-[400px] h-[300px] mb-4">
-                        <img 
-                          src={item?.image_url} 
-                          alt={item.title} 
-                          className="rounded-lg object-contain"
-                        />
-                      </div>
-                      <p>
-                        <strong>Description: </strong>{item.description} <br /><br /> under price <strong>$ {item.price}</strong>
-                      </p>
-                      <br />
-                      <div className="flex gap-2">
-              <button
-                onClick={() => handleAddToCart(item)}
-               
-                className={`flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center`}
-              >
-             Add to cart
-                <FaOpencart size={25} className="ml-2" />
-              </button>
-              <a
-                href={getPurchaseLink(item)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center"
-              >
-                Buy Now
-              </a>
-
-              <a
-                href={item.url}
-                target={item.url}
-                rel="noopener noreferrer"
-                className="flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center cursor-pointer"
-              >
-                Buy from marketplace
-              </a>
-            </div>
-                      <br /><br />
-                    </div>
-                  ))}
-                </div>
-              ),
-              isBot: true,
-            };
-            chatHistory.push(botMessage);
-          }
-        });
-  
-        setMessages(chatHistory);
-      }
-    } catch (error) {
-      console.error("Error fetching chats:", error);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userId) {
-      getChats(userId);
-    }
-  }, [userId, getChats]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !userId) return;
@@ -223,97 +138,86 @@ const ChatBot = () => {
   
     setMessages((prev) => [...prev, userMessage]);
     setTyping(true);
-  
-    const userQuery = input;
     setInput("");
   
     try {
-      const response = await axios.post<Chat>("http://127.0.0.1:8000/search", {
-        query: userQuery,
+      const response = await axios.post<ChatResponse>("http://127.0.0.1:8000/ask", {
+        query: input,
       });
-      console.log(response)
-      const chatId = await createChat(userQuery, response.data.products);
-    
-      if (response.data) {
-        const productSuggestions = response.data.products.map((item, index) => (
-          <div key={index}>
-            <br />
-            <strong>{index + 1}. {item.title}</strong>
-            <br />
-            <br />
-            <img
-              src={item?.image_url}
-              alt={item.title}
-              width={300}
-              className="mb-4 rounded-lg"
-            />
-            <p>
-              <strong>Description: </strong>{item.description} <br/><br/> under price <strong>$ {item.price}</strong>
-            </p>
-            <p>
-              <strong>Rating: </strong>{item.rating}
-            </p>
-            <br />
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleAddToCart(item)}
-               
-                className={`flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center`}
-              >
-             Add to cart
-                <FaOpencart size={25} className="ml-2" />
-              </button>
-              <a
-                href={getPurchaseLink(item)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center"
-              >
-                Buy Now
-              </a>
-
-              <a
-                href={item.url}
-                target={item.url}
-                rel="noopener noreferrer"
-                className="flex bg-black text-white px-3 py-2 rounded-md no-underline max-w-full break-words items-center"
-              >
-                Buy through amazon
-              </a>
+      
+      await createChat(input, response.data.products);
+        
+      const botMessage: Message = {
+        text: (
+          <div className="space-y-4">
+            <div className="prose dark:prose-invert">
+              {response.data.answer}
             </div>
-            <br />
-            <br />
+            
+            {response.data.products.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">Recommended Products:</h3>
+                {response.data.products.map((item, index) => (
+                  <div key={index} className="mb-8 p-4 border rounded-lg dark:border-gray-700">
+                    <div className="flex flex-col md:flex-row gap-6">
+                      <div className="md:w-1/3 relative h-48">
+                        <Image
+                          src={item.image_url}
+                          alt={item.title}
+                          fill
+                          className="rounded-lg object-contain"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder-product.png';
+                          }}
+                        />
+                      </div>
+                      <div className="md:w-2/3">
+                        <h4 className="text-lg font-medium">{item.title}</h4>
+                        <p className="text-gray-600 dark:text-gray-300 mt-1">
+                          ${item.price.toFixed(2)} | Rating: {item.rating}/5
+                        </p>
+                        <p className="mt-2 text-sm">{item.description}</p>
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          <button
+                            onClick={() => handleAddToCart(item)}
+                            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm"
+                          >
+                            <FaOpencart size={16} /> Add to Cart
+                          </button>
+                          <a
+                            href={getPurchaseLink(item)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md text-sm"
+                          >
+                            Buy Now
+                          </a>
+                          {item.url && (
+                            <a
+                              href={item.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-md text-sm"
+                            >
+                              View Product
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ));
-     
-        const botMessage: Message = {
-          text: <div>{productSuggestions}</div>,
-          isBot: true,
-        };
-  
-        setMessages((prev) => [...prev, botMessage]);
-  
-        if (chatId) {
-          const chatResponses = response.data.products.map((item) => ({
-            description: item.description,
-            imageURL: item.image_url,
-            price: item.price,
-            title: item.title,
-            rating: item.rating
-          }));
-  
-          try {
-            await axios.post("/api/prisma/responses", {
-              chatId,
-              responses: chatResponses,
-            });
-          } catch (responseError) {
-            console.error("Error saving responses:", responseError);
-          }
-        }
-      }
+        ),
+        isBot: true,
+      };
+      
+      setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
-      console.error("Error sending request to backend:", error);
+      console.error("Error:", error);
       setMessages((prev) => [
         ...prev,
         { text: "Sorry, there was an error processing your request.", isBot: true },

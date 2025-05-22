@@ -1,34 +1,18 @@
 "use client";
-
-import AuthButtons from "./AuthButtons";
-import Border from "./Border";
 import Header from "./Header";
-import SignUp from "./SignUp";
 import SignUpForm from "./SignUpForm";
 import React, { useState } from "react";
-function LoginComp() {
+import { Button } from "./ui/button";
 
-  const [mode, setMode] = useState("signup");
+type AuthMode = "signup" | "login";
+
+const LoginComp: React.FC = () => {
+  const [mode, setMode] = useState<AuthMode>("signup");
   
-  // const handleSignMessage = useCallback(async () => {
-  //   if (!publicKey || !signMessage) {
-  //     alert("Please connect your wallet first!");
-  //     return;
-  //   }
-
-  //   try {
-  //     const message = new TextEncoder().encode("Authenticate with Solana via Phantom Wallet");
-  //     const signedMessage = await signMessage(message);
-  //     const signatureBase64 = Buffer.from(signedMessage).toString("base64");
-
-  //     setSignature(signatureBase64);
-  //     alert("Signed message successfully!");
-  //   } catch (error) {
-  //     console.error("Signing error:", error);
-  //     alert("Failed to sign the message.");
-  //   }
-  // }, [publicKey, signMessage]);
-
+  const toggleMode = (): void => {
+    setMode(mode === "signup" ? "login" : "signup");
+  };
+  
   return (
     <div className="bg-black">
       <div className="flex flex-col md:flex-row h-screen items-center pl-4">
@@ -39,40 +23,23 @@ function LoginComp() {
             background: "linear-gradient(180deg, rgba(18,9,121,1) 11%, rgba(0,0,0,1) 50%, rgba(0,0,0,1) 100%)",
           }}
         >
-          {/* <WalletMultiButton />
-          {publicKey && (
-            <p className="text-sm mt-2">
-              Connected: <span className="font-bold">{publicKey.toBase58()}</span>
-            </p>
-          )} */}
-          {/* <button
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg"
-            onClick={handleSignMessage}
-          >
-            Sign Message
-          </button> */}
-          {/* {signature && (
-            <p className="text-sm text-gray-400 mt-2 break-all">
-              Signature: {signature}
-            </p>
-          )} */}
           <Header />
-         
+          <Button
+            type="submit"
+            className="w-[20rem] bg-zinc-900 text-white py-2 rounded-lg font-medium hover:bg-white hover:text-black mt-2"
+            onClick={toggleMode}
+          >
+            {mode === 'signup' ? 'Log In' : 'Sign Up'}
+          </Button>
         </div>
-
+        
         {/* Right Section */}
         <div className="flex flex-col justify-center items-center w-full md:w-1/2 p-6 md:p-10 bg-black">
-          <h3 className="text-2xl md:text-3xl font-bold mb-6 text-white">
-            {mode === "signup" ? "Sign Up Account" : "Log In Account"}
-          </h3>
-          <AuthButtons />
-       
-         
-         
+          <SignUpForm mode={mode} />
         </div>
       </div>
     </div>
   );
-}
+};
 
 export default LoginComp;

@@ -3,54 +3,67 @@ import React, { useEffect, useState } from "react";
 import DisplayCartItems from "@/components/DisplayCartItems";
 
 interface CartProp {
-  params: {
+  params: Promise<{
     userId: string;
-  };
+  }>;
 }
 
 interface CartItem {
-    id: number;
-    productName: string;
-    description: string;
-    price: number;
-    quantity: number;
-    image_url: string;
-   
-    
-  }
+  id: number;
+  productName: string;
+  description: string;
+  price: number;
+  quantity: number;
+  image_url: string;
+}
 
 const Cart = ({ params }: CartProp) => {
+  const [userId, setUserId] = useState<string>("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [solanaRate, setSolanaRate] = useState<number | null>(null);
 
-  
+  // Extract userId from params
   useEffect(() => {
+    const getParams = async () => {
+      const resolvedParams = await params;
+      setUserId(resolvedParams.userId);
+    };
+    getParams();
+  }, [params]);
+
+  useEffect(() => {
+    if (!userId) return; // Don't fetch until userId is available
+
     const fetchCartItems = async () => {
-        const {userId} =await params;
-     
       try {
+        setLoading(true);
         const response = await fetch(`/api/prisma/cart/getCart/${userId}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch cart items");
+        }
         const data = await response.json();
-        console.log(data)
         setCartItems(data);
       } catch (err) {
-        setError("Failed to fetch cart items");
-        console.error(err);
+        setError(err instanceof Error ? err.message : "Failed to fetch cart items");
       } finally {
         setLoading(false);
       }
     };
 
     fetchCartItems();
-  }, []);
+  }, [userId]);
 
-  // Fetch Solana price from CryptoCompare API
   useEffect(() => {
     const fetchSolanaPrice = async () => {
       try {
-        const response = await fetch("https://min-api.cryptocompare.com/data/price?fsym=SOL&tsyms=USD");
+        const response = await fetch(
+          "https://min-api.cryptocompare.com/data/price?fsym=SOL&tsyms=USD"
+        );
+        if (!response.ok) {
+          throw new Error("Failed to fetch Solana price");
+        }
         const data = await response.json();
         setSolanaRate(data.USD);
       } catch (error) {
@@ -60,25 +73,33 @@ const Cart = ({ params }: CartProp) => {
     fetchSolanaPrice();
   }, []);
 
-  const totalAmountUSD = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  const totalAmountUSD = cartItems.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
   const totalAmountSOL = solanaRate ? (totalAmountUSD / solanaRate).toFixed(4) : null;
 
   const handleIncrease = async (productName: string) => {
     try {
-      const response = await fetch('/api/cart/increase', {
-        method: 'POST',
+      const response = await fetch("/api/cart/increase", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: params.userId,
-          productName
-        })
+          userId,
+          productName,
+        }),
       });
+      if (!response.ok) {
+        throw new Error("Failed to increase quantity");
+      }
       const updatedItem = await response.json();
-      setCartItems(cartItems.map(item => 
-        item.productName === productName ? updatedItem : item
-      ));
+      setCartItems(
+        cartItems.map((item) =>
+          item.productName === productName ? updatedItem : item
+        )
+      );
     } catch (err) {
       console.error("Failed to increase quantity:", err);
     }
@@ -86,20 +107,25 @@ const Cart = ({ params }: CartProp) => {
 
   const handleDecrease = async (productName: string) => {
     try {
-      const response = await fetch('/api/cart/decrease', {
-        method: 'POST',
+      const response = await fetch("/api/cart/decrease", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: params.userId,
-          productName
-        })
+          userId,
+          productName,
+        }),
       });
+      if (!response.ok) {
+        throw new Error("Failed to decrease quantity");
+      }
       const updatedItem = await response.json();
-      setCartItems(cartItems.map(item => 
-        item.productName === productName ? updatedItem : item
-      ));
+      setCartItems(
+        cartItems.map((item) =>
+          item.productName === productName ? updatedItem : item
+        )
+      );
     } catch (err) {
       console.error("Failed to decrease quantity:", err);
     }
@@ -107,17 +133,20 @@ const Cart = ({ params }: CartProp) => {
 
   const handleRemove = async (id: number) => {
     try {
-      await fetch('/api/cart/remove', {
-        method: 'POST',
+      const response = await fetch("/api/cart/remove", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: params.userId,
-          productId: id
-        })
+          userId,
+          productId: id,
+        }),
       });
-      setCartItems(cartItems.filter(item => item.id !== id));
+      if (!response.ok) {
+        throw new Error("Failed to remove item");
+      }
+      setCartItems(cartItems.filter((item) => item.id !== id));
     } catch (err) {
       console.error("Failed to remove item:", err);
     }
@@ -126,16 +155,19 @@ const Cart = ({ params }: CartProp) => {
   const handlePurchase = async () => {
     try {
       setLoading(true);
-      await fetch('/api/cart/checkout', {
-        method: 'POST',
+      const response = await fetch("/api/cart/checkout", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: params.userId,
-          solanaRate
-        })
+          userId,
+          solanaRate,
+        }),
       });
+      if (!response.ok) {
+        throw new Error("Checkout failed");
+      }
       setCartItems([]);
     } catch (err) {
       console.error("Checkout failed:", err);
@@ -147,9 +179,8 @@ const Cart = ({ params }: CartProp) => {
   if (loading && !cartItems.length) return <p className="text-center text-lg">Loading cart...</p>;
   if (error) return <p className="text-center text-lg text-red-500">{error}</p>;
   if (!cartItems.length) return <p className="text-center text-lg text-gray-500">Your cart is empty.</p>;
-  console.log(cartItems)
+
   return (
-   
     <DisplayCartItems
       cartProducts={cartItems}
       totalAmountUSD={totalAmountUSD}

@@ -44,6 +44,7 @@ export const POST = async (req: Request) => {
             description,
             price,
             quantity,
+          
           },
         });
       }
